@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from 'expo-image-manipulator';
 import {
   avatars,
   account,
@@ -37,25 +38,40 @@ const DisplayAvatar = ({ userId }: { userId: string }) => {
   }, [userId]);
 
   const handleChangeAvatar = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  
     if (permissionResult.granted === false) {
       alert("Bạn cần cấp quyền truy cập vào thư viện ảnh!");
       return;
     }
-
+  
     const result = await ImagePicker.launchImageLibraryAsync();
-
+  
     if (!result.canceled) {
       const newAvatarUri = result.assets[0].uri; // Lấy uri mới
-      console.log("URL của ảnh mới là:", newAvatarUri); // Log để kiểm tra
-
-      setUserInfo((prev) => ({ ...prev, avatarUrl: newAvatarUri })); // Cập nhật avatar hiện tại
-
+  
+      // Kiểm tra định dạng của ảnh
+      const isHEIF = newAvatarUri.endsWith('.heif') || newAvatarUri.endsWith('.heic');
+  
+      let finalUri = newAvatarUri;
+  
+      // Nếu ảnh là HEIF, có thể cần xoay
+      if (isHEIF) {
+        const manipResult = await ImageManipulator.manipulateAsync(
+          newAvatarUri,
+          [{ rotate: 90 }], // Xoay 90 độ nếu cần
+          { compress: 1, format: ImageManipulator.SaveFormat.PNG }
+        );
+        finalUri = manipResult.uri; // Cập nhật uri nếu đã xoay
+      }
+  
+      console.log("URL của ảnh mới là:", finalUri); // Log để kiểm tra
+  
+      setUserInfo((prev) => ({ ...prev, avatarUrl: finalUri })); // Cập nhật avatar hiện tại
+  
       // Cập nhật avatar trong cơ sở dữ liệu bằng hàm updateAvatar
       try {
-        await updateAvatar(newAvatarUri); // Gọi hàm updateAvatar với uri mới
+        await updateAvatar(finalUri); // Gọi hàm updateAvatar với uri mới
         console.log("Cập nhật avatar trong cơ sở dữ liệu thành công");
       } catch (error) {
         console.error("Lỗi khi cập nhật avatar:", error);

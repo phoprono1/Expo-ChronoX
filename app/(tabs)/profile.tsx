@@ -11,11 +11,20 @@ import { useRouter } from "expo-router";
 import DisplayAvatar from "@/components/cards/UserProfile";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Query } from "react-native-appwrite";
+import { useBottomSheet } from '@/hooks/BottomSheetProvider'; // Import useBottomSheet
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 const Profile = () => {
+  const { isVisible } = useBottomSheet(); // Lấy trạng thái từ context
+  const scale = useSharedValue(1); // Khởi tạo giá trị chia sẻ cho kích thước
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null); // Thêm state cho avatar
   const router = useRouter(); // Khởi tạo router
+
+  // Cập nhật giá trị scale khi isVisible thay đổi
+  React.useEffect(() => {
+    scale.value = withTiming(isVisible ? 0.9 : 1, { duration: 300 }); // Thay đổi kích thước với hiệu ứng
+  }, [isVisible]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -50,8 +59,15 @@ const Profile = () => {
     }
   };
 
+  // Tạo kiểu động cho View
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
   return (
-    <View className="flex-1 w-full items-center p-4 bg-white">
+    <Animated.View style={[{ flex: 1, width: '100%', alignItems: 'center', padding: 16, backgroundColor: 'white' }, animatedStyle]}>
       <View className="w-full">
         <View className="justify-center">
           <DisplayAvatar userId={email} />
@@ -62,7 +78,7 @@ const Profile = () => {
           Đăng xuất
         </Text>
       </View>
-    </View>
+    </Animated.View>
   );
 };
 

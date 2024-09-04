@@ -5,6 +5,7 @@ import { account } from '@/constants/appwriteConfig';
 import { NavigationContainer } from '@react-navigation/native';
 import MainTabNavigator from './(tabs)/_layout';
 import SignIn from './(auth)/SignIn';
+import { BottomSheetProvider } from '@/hooks/BottomSheetProvider';
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
@@ -39,8 +40,10 @@ export default function Index() {
   }
 
   return (
-    <NavigationContainer independent={true}>
-      {isLoggedIn ? <MainTabNavigator /> : <SignIn />}
-    </NavigationContainer>
+    <BottomSheetProvider>
+      <NavigationContainer independent={true}>
+        {isLoggedIn ? <MainTabNavigator /> : <SignIn />}
+      </NavigationContainer>
+    </BottomSheetProvider>
   );
 }

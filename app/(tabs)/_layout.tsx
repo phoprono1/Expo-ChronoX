@@ -9,6 +9,7 @@ import search from "./search";
 import create from "./create";
 import message from "./message";
 import profile from "./profile";
+import { useBottomSheet } from "@/hooks/BottomSheetProvider";
 
 const Tab = createBottomTabNavigator();
 
@@ -19,9 +20,14 @@ const CustomTabBarButton = ({
   children: React.ReactNode;
   onPress: () => void;
 }) => {
+  const bottomSheet = useBottomSheet();
+  const openBottomSheet = bottomSheet ? bottomSheet.openBottomSheet : () => {};
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={() => {
+        openBottomSheet();
+      }}
       style={{
         justifyContent: "center",
         alignItems: "center",

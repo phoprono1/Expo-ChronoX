@@ -7,7 +7,10 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "typeRoots": [
+      "react-native-exif"
+    ]
   },
   "include": [
     "**/*.ts",
