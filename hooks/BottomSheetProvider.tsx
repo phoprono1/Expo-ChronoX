@@ -25,7 +25,7 @@ export const BottomSheetProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [snapPoints] = useState(["95%"]);
+  const [snapPoints] = useState(["90%"]);
 
   const openBottomSheet = () => setIsVisible(true);
   const closeBottomSheet = () => setIsVisible(false);

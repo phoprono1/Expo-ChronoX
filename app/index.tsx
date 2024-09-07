@@ -6,6 +6,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import MainTabNavigator from './(tabs)/_layout';
 import SignIn from './(auth)/SignIn';
 import { BottomSheetProvider } from '@/hooks/BottomSheetProvider';
+import { ApolloProvider } from '@apollo/client';
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
@@ -40,8 +41,8 @@ export default function Index() {
   }
 
   return (
-    <BottomSheetProvider>
-      <NavigationContainer independent={true}>
+      <BottomSheetProvider>
+        <NavigationContainer independent={true}>
         {isLoggedIn ? <MainTabNavigator /> : <SignIn />}
       </NavigationContainer>
     </BottomSheetProvider>

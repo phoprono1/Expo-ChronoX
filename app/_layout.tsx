@@ -1,18 +1,14 @@
 import { Stack } from "expo-router";
-import { View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { LogBox, View } from "react-native";
 
 export default function Layout() {
-  const backgroundColor = useThemeColor({}, 'background');
+  LogBox.ignoreLogs(['Warning: TRenderEngineProvider', 'Warning: MemoizedTNodeRenderer', 'Warning: TNodeChildrenRenderer']);
 
   return (
-    <View style={{ flex: 1, backgroundColor }}>
-      <SafeAreaView style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: "transparent" }}>
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
         </Stack>
-      </SafeAreaView>
     </View>
   );
 }

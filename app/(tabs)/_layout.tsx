@@ -2,7 +2,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { TouchableOpacity, View } from "react-native";
 
 import Ionicons from "react-native-vector-icons/Ionicons";
-import FontAwesome from "react-native-vector-icons/FontAwesome"; // Thêm import cho FontAwesome
 
 import home from "./home";
 import search from "./search";
@@ -10,6 +9,7 @@ import create from "./create";
 import message from "./message";
 import profile from "./profile";
 import { useBottomSheet } from "@/hooks/BottomSheetProvider";
+import { BlurView } from "expo-blur";
 
 const Tab = createBottomTabNavigator();
 
@@ -82,11 +82,18 @@ export default function MainTabNavigator() {
         tabBarShowLabel: false,
         tabBarStyle: {
           position: "absolute",
-          bottom: 0,
+          bottom: 10,
           backgroundColor: "transparent",
           height: 60,
           borderTopWidth: 0, // Ví dụ: thêm viền trên
         },
+        tabBarBackground: () => <View className="bg-none absolute bottom-0 h-full w-full">
+        <BlurView
+            style={{ height: 100 }}
+            tint="extraLight"
+            intensity={50}
+          ></BlurView>
+    </View>,
       })}
     >
       <Tab.Screen

@@ -6,12 +6,11 @@ import {
   ID,
   Query,
   Storage,
-  ImageGravity,
 } from "react-native-appwrite";
 
 // Định nghĩa cấu hình
 export const config = {
-  endpoint: "https://thrush-proud-primarily.ngrok-free.app/v1",
+  endpoint: "http://192.168.1.5/v1",
   platform: "com.hoangpho.chronox",
   projectId: "66d2b51d003002a3b407",
   databaseId: "66d442f4000eac24b59f",
@@ -177,6 +176,17 @@ export const getUserInfo = async () => {
   }
 };
 
+// Hàm lấy URL của tệp từ bucket bài viết
+export const getFileFromPostView = async (fileId: string) => {
+  try {
+    const fileUrl = storage.getFileView(config.storagePostId, fileId); // Sử dụng storagePostId cho bài viết
+    if (!fileUrl) throw new Error("Không tìm thấy URL cho tệp.");
+    return fileUrl;
+  } catch (error) {
+    throw new Error(error as string);
+  }
+};
+
 // Phương thức tải file
 export const uploadFile = async (file: {
   [x: string]: any;
@@ -248,53 +258,59 @@ export const signOutUser = async () => {
 };
 
 // Phương thức tải file lên Storage cho bài viết
-const uploadPostFile = async (file: {
-  uri: string;
-  fileName: string;
-  mimeType: string;
-  fileSize: number;
-}) => {
-  try {
-    const uploadedFile = await storage.createFile(
-      config.storagePostId, // Sử dụng ID của Storage cho bài viết
-      ID.unique(),
-      {
-        name: file.fileName, // Thay đổi từ fileName thành name
-        type: file.mimeType, // Thay đổi từ mimeType thành type
-        size: file.fileSize, // Thay đổi từ fileSize thành size
-        uri: file.uri, // Giữ nguyên uri
-      }
-    );
+const uploadPostFiles = async (files: { uri: string; fileName: string; mimeType: string; fileSize: number; }[]) => {
+  const uploadedFileUrls: string[] = []; // Mảng để lưu trữ URL của các file đã tải lên
 
-    const fileUrl = await getFileView(
-      uploadedFile.$id,
-      file.mimeType.startsWith("video") ? "video" : "image"
-    ); // Lấy URL của file đã tải lên
+  for (const file of files) {
+    try {
+      const uploadedFile = await storage.createFile(
+        config.storagePostId, // Sử dụng ID của Storage cho bài viết
+        ID.unique(),
+        {
+          name: file.fileName,
+          type: file.mimeType,
+          size: file.fileSize,
+          uri: file.uri,
+        }
+      );
 
-    return fileUrl;
-  } catch (error) {
-    throw new Error(error as string);
+      let fileUrl = await getFileFromPostView(uploadedFile.$id); // Lấy URL của file đã tải lên
+      uploadedFileUrls.push(fileUrl.toString()); // Thêm URL vào mảng
+    } catch (error) {
+      console.error("Lỗi khi tải file:", error);
+      throw error; // Ném lỗi nếu có vấn đề
+    }
   }
+
+  return uploadedFileUrls; // Trả về mảng URL của các file đã tải lên
 };
 
 // Phương thức tạo bài viết
 export const createPost = async (
-  mediaUri: string,
+  mediaUris: string[], // Đổi kiểu dữ liệu thành String[]
   title: string,
   hashtags: string[]
 ) => {
   try {
-    // Kiểm tra loại file (video hay ảnh) để lưu với định dạng tương ứng
-    const fileExtension = mediaUri.split(".").pop(); // Lấy phần mở rộng của file
-    const mimeType = fileExtension === "mp4" ? "video/mp4" : "image/jpeg"; // Xác định loại MIME
+    let uploadedFileUrls: string[] = []; // Khởi tạo mảng cho URL file
 
-    // Tải file lên Storage và lấy URL
-    const uploadedFileUrl = await uploadPostFile({
-      uri: mediaUri,
-      fileName: `post_${Date.now()}.${fileExtension}`, // Tạo tên file duy nhất với phần mở rộng tương ứng
-      mimeType: mimeType, // Đảm bảo loại file là đúng
-      fileSize: 0, // Kích thước file, có thể cập nhật sau khi fetch
-    });
+    // Nếu mediaUris không rỗng, tải file lên Storage
+    if (mediaUris && mediaUris.length > 0) {
+      const files = mediaUris.map((uri) => {
+        const fileExtension = uri.split(".").pop(); // Lấy phần mở rộng của file
+        const mimeType = fileExtension === "mp4" ? "video/mp4" : "image/jpeg"; // Xác định loại MIME
+
+        return {
+          uri,
+          fileName: `post_${Date.now()}.${fileExtension}`, // Tạo tên file duy nhất với phần mở rộng tương ứng
+          mimeType,
+          fileSize: 0, // Kích thước file, có thể cập nhật sau khi fetch
+        };
+      });
+
+      // Tải lên tất cả các file và lấy URL
+      uploadedFileUrls = await uploadPostFiles(files);
+    }
 
     // Lấy ID của người dùng hiện tại
     const currentUser = await getUserInfo();
@@ -303,7 +319,7 @@ export const createPost = async (
 
     // Tạo đối tượng bài viết
     const postDocument = {
-      mediaUri: uploadedFileUrl, // Sử dụng URL của file đã tải lên
+      mediaUri: uploadedFileUrls, // Sử dụng mảng URL của các file đã tải lên
       title,
       hashtags,
       accountID: userId, // Lưu ID người dùng trực tiếp
@@ -324,3 +340,49 @@ export const createPost = async (
     throw error; // Ném lỗi để xử lý ở nơi gọi hàm
   }
 };
+// Hàm lấy danh sách bài viết từ mới nhất đến cũ nhất
+export const fetchPosts = async () => {
+  try {
+    // Lấy danh sách các bài viết từ PostCollections
+    const response = await databases.listDocuments(
+      config.databaseId,
+      config.postCollectionId,
+      [Query.orderDesc("$createdAt")] // Thêm limit và offset
+    );
+
+    const apiUrl = `${config.endpoint}/databases/${config.databaseId}/collections/${config.postCollectionId}/documents`; // Thay thế [YOUR_API_ENDPOINT] bằng endpoint của bạn
+    console.log("API URL dữ liệu bài viết:", apiUrl); // In ra URL API
+    console.log("Dữ liệu bài viết:", response); // In ra dữ liệu bài viết
+    // Kiểm tra xem có bài viết nào không
+    if (response.documents.length > 0) {
+      return response.documents; // Trả về danh sách bài viết
+    } else {
+      console.log("Không có bài viết nào.");
+      return []; // Trả về mảng rỗng nếu không có bài viết
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách bài viết:", error);
+    throw error; // Ném lỗi để xử lý ở nơi gọi hàm
+  }
+};
+
+// Hàm lấy thông tin người dùng dựa trên ID
+export const getUserById = async (userId: string) => {
+  try {
+    const userDocuments = await databases.listDocuments(
+      config.databaseId,
+      config.userCollectionId,
+      [Query.equal("accountID", userId)]
+    );
+
+    if (userDocuments.documents.length > 0) {
+      return userDocuments.documents[0]; // Trả về thông tin người dùng đầu tiên
+    } else {
+      throw new Error("Không tìm thấy người dùng.");
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy thông tin người dùng:", error);
+    throw error;
+  }
+};
+
