@@ -341,13 +341,13 @@ export const createPost = async (
   }
 };
 // Hàm lấy danh sách bài viết từ mới nhất đến cũ nhất
-export const fetchPosts = async () => {
+export const fetchPostsFirst = async (limit: number) => {
   try {
     // Lấy danh sách các bài viết từ PostCollections
     const response = await databases.listDocuments(
       config.databaseId,
       config.postCollectionId,
-      [Query.orderDesc("$createdAt")] // Thêm limit và offset
+      [Query.orderDesc("$createdAt"), Query.limit(limit)] // Thêm limit và offset
     );
 
     const apiUrl = `${config.endpoint}/databases/${config.databaseId}/collections/${config.postCollectionId}/documents`; // Thay thế [YOUR_API_ENDPOINT] bằng endpoint của bạn
@@ -363,6 +363,21 @@ export const fetchPosts = async () => {
   } catch (error) {
     console.error("Lỗi khi lấy danh sách bài viết:", error);
     throw error; // Ném lỗi để xử lý ở nơi gọi hàm
+  }
+};
+
+export const fetchPostsNext = async (lastID: string, limit: number) => {
+  try {
+    const response = await databases.listDocuments(
+      config.databaseId,
+      config.postCollectionId,
+      [Query.orderDesc("$createdAt"), Query.limit(limit), Query.cursorAfter(lastID)]
+    );
+
+    return response;
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách bài viết tiếp theo:", error);
+    throw error;
   }
 };
 

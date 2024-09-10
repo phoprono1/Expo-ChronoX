@@ -21,6 +21,7 @@ interface PostCardProps {
   hashtags: string[];
   onLike: () => void;
   onComment: () => void;
+  onShare: () => void;
 }
 
 const PostCard: React.FC<PostCardProps> = ({
@@ -32,14 +33,14 @@ const PostCard: React.FC<PostCardProps> = ({
   hashtags,
   onLike,
   onComment,
+  onShare,
 }) => {
   const [liked, setLiked] = useState(false); // Trạng thái thích
   const { width: windowWidth } = Dimensions.get("window"); // Lấy chiều rộng màn hình
-  const adjustedWidth = windowWidth - 28; // Trừ đi 2px
   const [mediaTypes, setMediaTypes] = useState<string[]>([]); // Lưu trữ loại media
 
   const textStyle = {
-    color: 'black',
+    color: "black",
     fontSize: 18,
   };
 
@@ -53,9 +54,14 @@ const PostCard: React.FC<PostCardProps> = ({
     h4: textStyle,
   };
 
-  const handleLike = () => {
+  const handleLike = async () => {
     setLiked(!liked); // Đảo ngược trạng thái thích
-    onLike(); // Gọi hàm onLike
+    await onLike(); // Gọi hàm onLike
+  };
+
+  const handleShare = () => {
+    // Thêm logic chia sẻ ở đây
+    onShare();
   };
 
   // Hàm kiểm tra MIME type
@@ -72,10 +78,12 @@ const PostCard: React.FC<PostCardProps> = ({
 
   useEffect(() => {
     const checkMediaTypes = async () => {
-      const types = await Promise.all(mediaUri.map(async (uri) => {
-        const mimeType = await getMimeType(uri);
-        return mimeType?.startsWith("video/") ? "video" : "image";
-      }));
+      const types = await Promise.all(
+        mediaUri.map(async (uri) => {
+          const mimeType = await getMimeType(uri);
+          return mimeType?.startsWith("video/") ? "video" : "image";
+        })
+      );
       setMediaTypes(types);
     };
 
@@ -84,23 +92,62 @@ const PostCard: React.FC<PostCardProps> = ({
 
   const renderMedia = (item: string, index: number) => {
     return (
-      <View style={{ width: adjustedWidth, height: 200, marginRight: 10 }}>
+      <View className="h-80 w-80 mr-6 ml-4 overflow-hidden flex-1">
         {mediaTypes[index] === "video" ? ( // Kiểm tra nếu là video
           <Video
             source={{ uri: item }}
-            style={{ width: "100%", height: "100%", borderRadius: 10 }} // Bo góc video
+            style={{ borderRadius: 10 }} // Bo góc video
             useNativeControls
             resizeMode={ResizeMode.CONTAIN}
             isLooping={false} // Có thể thay đổi thành true nếu bạn muốn video lặp lại
+            className="h-full w-full max-w-full"
           />
         ) : (
           <Image
             source={{ uri: item }}
-            style={{ width: "100%", height: "100%", borderRadius: 10 }} // Bo góc ảnh
+            style={{ borderRadius: 10 }} // Bo góc ảnh
             contentFit="cover"
+            className="h-full w-full max-w-full"
           />
         )}
       </View>
+    );
+  };
+
+  const renderSingleMedia = (item: string) => {
+    return (
+      <View className="h-80 w-full">
+        {mediaTypes[0] === "video" ? ( // Kiểm tra nếu là video
+          <Video
+            source={{ uri: item }}
+            style={{ borderRadius: 10 }} // Bo góc video
+            useNativeControls
+            resizeMode={ResizeMode.CONTAIN}
+            isLooping={false}
+            className="h-full w-full"
+          />
+        ) : (
+          <Image
+            source={{ uri: item }}
+            style={{ borderRadius: 10 }} // Bo góc ảnh
+            contentFit="cover"
+            className="h-full w-full"
+          />
+        )}
+      </View>
+    );
+  };
+
+  const renderMultipleMedia = () => {
+    return (
+      <FlatList
+        horizontal={true}
+        data={mediaUri}
+        renderItem={({ item, index }) => renderMedia(item, index)}
+        keyExtractor={(item) => item} // Sử dụng URI làm key
+        showsHorizontalScrollIndicator={false} // Ẩn thanh cuộn ngang
+        nestedScrollEnabled={true}
+      />
     );
   };
 
@@ -130,17 +177,10 @@ const PostCard: React.FC<PostCardProps> = ({
 
       {mediaUri.length > 0 && ( // Kiểm tra nếu mảng mediaUri không rỗng
         <View>
-          {mediaUri.length === 1 ? ( // Nếu chỉ có 1 media, hiển thị trực tiếp
-            renderMedia(mediaUri[0], 0)
-          ) : (
-            <FlatList
-              horizontal
-              data={mediaUri}
-              renderItem={({ item, index }) => renderMedia(item, index)}
-              keyExtractor={(item) => item} // Sử dụng URI làm key
-              showsHorizontalScrollIndicator={false} // Ẩn thanh cuộn ngang
-            />
-          )}
+          {mediaUri.length === 1 // Nếu chỉ có 1 media, hiển thị trực tiếp
+            ? renderSingleMedia(mediaUri[0])
+            : renderMultipleMedia() // Hiển thị nhiều media
+          }
         </View>
       )}
 
@@ -153,24 +193,31 @@ const PostCard: React.FC<PostCardProps> = ({
         </Text>
       </View>
 
-      <View className="flex-row justify-between mt-2">
+      <View className="flex-row justify-start mt-2">
         <TouchableOpacity
           onPress={handleLike}
-          className="flex flex-row items-center"
+          className="flex flex-row items-center mr-4" // Thêm margin-right để tạo khoảng cách
         >
           <Ionicons
             name={liked ? "heart-sharp" : "heart-outline"}
             size={20}
             color="red"
           />
-          <Text className="text-red-500 ml-1">Thích</Text>
+          <Text className="text-red-500 ml-1">0</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={onComment}
+          className="flex flex-row items-center mr-4" // Thêm margin-right để tạo khoảng cách
+        >
+          <Ionicons name="chatbox-ellipses-outline" size={20} color="black" />
+          <Text className="text-slate-600 ml-1">0</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleShare}
           className="flex flex-row items-center"
         >
-          <Ionicons name="chatbubble" size={20} color="#475569" />
-          <Text className="text-slate-600 ml-1">Bình luận</Text>
+          <Ionicons name="share-social-outline" size={20} color="#475569" />
+          <Text className="text-slate-600 ml-1"></Text>
         </TouchableOpacity>
       </View>
     </View>

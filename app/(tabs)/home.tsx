@@ -3,11 +3,11 @@ import {
   View,
   RefreshControl,
   Text,
-  FlatList, // Thay thế ScrollView bằng FlatList
+  FlatList,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import PostCard from "@/components/cards/PostCard"; // Import component PostCard
-import { useBottomSheet } from "@/hooks/BottomSheetProvider"; // Import useBottomSheet
+import PostCard from "@/components/cards/PostCard";
+import { useBottomSheet } from "@/hooks/BottomSheetProvider";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,59 +17,85 @@ import { BlurView } from "expo-blur";
 import {
   client,
   config,
-  fetchPosts,
+  fetchPostsFirst,
+  fetchPostsNext,
   getUserById,
 } from "@/constants/appwriteConfig";
 
 const Home = () => {
-  const { isVisible } = useBottomSheet(); // Lấy hàm và isVisible từ context
-  const scale = useSharedValue(1); // Khởi tạo giá trị chia sẻ cho kích thước
+  const { isVisible } = useBottomSheet();
+  const scale = useSharedValue(1);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingNext, setLoadingNext] = useState(false);
+  const [lastID, setLastID] = useState<string | null>(null);
+  const [limit, setLimit] = useState(3);
 
   const loadPosts = async () => {
+    setLoading(true);
     try {
-      const fetchedPosts = await fetchPosts(); // Gọi hàm fetchPosts
+      const fetchedPosts = await fetchPostsFirst(limit);
       const postsWithUserInfo = await Promise.all(
         fetchedPosts.map(async (post) => {
-          const userInfo = await getUserById(post.accountID.accountID); // Lấy thông tin người dùng
+          const userInfo = await getUserById(post.accountID.accountID);
           return {
             ...post,
-            userInfo, // Thêm thông tin người dùng vào bài viết
+            userInfo,
           };
         })
       );
-      setPosts(postsWithUserInfo); // Cập nhật state với danh sách bài viết
+      setPosts(postsWithUserInfo);
+      setLastID(fetchedPosts.length > 0 ? fetchedPosts[fetchedPosts.length - 1].$id : null);
     } catch (error) {
       console.error("Lỗi khi tải bài viết:", error);
     } finally {
-      setLoading(false); // Đặt loading thành false sau khi hoàn thành
+      setLoading(false);
+    }
+  };
+
+  const loadMorePosts = async () => {
+    if (loadingNext || !lastID) return;
+    setLoadingNext(true);
+    try {
+      const fetchedPosts = await fetchPostsNext(lastID, limit);
+      const postsWithUserInfo = await Promise.all(
+        fetchedPosts.documents.map(async (post) => {
+          const userInfo = await getUserById(post.accountID.accountID);
+          return {
+            ...post,
+            userInfo,
+          };
+        })
+      );
+      setPosts((prevPosts) => [...prevPosts, ...postsWithUserInfo]);
+      setLastID(fetchedPosts.documents.length > 0 ? fetchedPosts.documents[fetchedPosts.documents.length - 1].$id : null);
+    } catch (error) {
+      console.error("Lỗi khi tải thêm bài viết:", error);
+    } finally {
+      setLoadingNext(false);
     }
   };
 
   useEffect(() => {
     loadPosts();
 
-    // Lắng nghe sự kiện realtime
     const unsubscribe = client.subscribe(
       `databases.${config.databaseId}.collections.${config.postCollectionId}.documents`,
       (response) => {
-        console.log("Bài viết mới đã được tạo 123:", response.payload);
-        loadPosts(); // Tải lại danh sách bài viết khi có bài viết mới
+        console.log("Bài viết mới đã được tạo:", response.payload);
+        loadPosts();
       }
     );
 
     return () => {
-      unsubscribe(); // Hủy đăng ký khi component unmount
+      unsubscribe();
     };
   }, []);
 
-  // Cập nhật giá trị scale khi isVisible thay đổi
   React.useEffect(() => {
-    scale.value = withTiming(isVisible ? 0.8 : 1, { duration: 200 }); // Thay đổi kích thước với hiệu ứng
+    scale.value = withTiming(isVisible ? 0.8 : 1, { duration: 200 });
   }, [isVisible]);
 
-  // Tạo kiểu động cho PostCard
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ scale: scale.value }],
@@ -78,18 +104,19 @@ const Home = () => {
 
   const renderItem = ({ item }: { item: any }) => (
     <Animated.View
-      className="flex-1 p-1 w-full bg-white border-2 border-gray-300 rounded-3xl mb-5 shadow-md" // Thêm padding dưới cùng
+      className="flex-1 p-1 w-full bg-white border-2 border-gray-300 rounded-3xl mb-5 shadow-md"
       key={item.$id}
     >
       <PostCard
-        avatar={item.userInfo?.avatar || ""} // Sử dụng avatar từ thông tin người dùng
-        username={item.userInfo?.username || "Unknown User"} // Sử dụng username từ thông tin người dùng
-        email={item.userInfo?.email || "No Email"} // Sử dụng email từ thông tin người dùng
+        avatar={item.userInfo?.avatar || ""}
+        username={item.userInfo?.username || "Unknown User"}
+        email={item.userInfo?.email || "No Email"}
         mediaUri={item.mediaUri}
         title={item.title}
         hashtags={item.hashtags}
         onLike={() => console.log("Liked!")}
         onComment={() => console.log("Commented!")}
+        onShare={() => console.log("Shared!")}
       />
     </Animated.View>
   );
@@ -105,14 +132,17 @@ const Home = () => {
           <FlatList
             data={posts}
             renderItem={renderItem}
-            keyExtractor={(item) => item.$id} // Sử dụng $id làm key
+            keyExtractor={(item) => item.$id}
             refreshControl={
               <RefreshControl
-                onRefresh={loadPosts} // Gọi lại hàm loadPosts khi refresh
+                onRefresh={loadPosts}
                 refreshing={loading}
               />
             }
-            ListEmptyComponent={<Text>Loading...</Text>} // Hiển thị loading nếu không có bài viết
+            ListEmptyComponent={<Text>Loading...</Text>}
+            onEndReached={loadMorePosts}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={loadingNext ? <Text>Đang tải thêm...</Text> : null}
           />
         </SafeAreaView>
       </BlurView>
