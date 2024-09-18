@@ -19,3 +19,4 @@ web-build/
 expo-env.d.ts
 # @end expo-cli
 my-app-env.d.ts
+.aider*

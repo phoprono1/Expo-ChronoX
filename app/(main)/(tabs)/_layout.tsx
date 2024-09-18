@@ -26,7 +26,7 @@ const CustomTabBarButton = ({
   return (
     <TouchableOpacity
       onPress={() => {
-        openBottomSheet();
+        openBottomSheet('createPost');
       }}
       style={{
         justifyContent: "center",

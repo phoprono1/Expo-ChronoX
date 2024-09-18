@@ -3,12 +3,8 @@ import { SafeAreaView, Text, TouchableOpacity, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { Image } from "expo-image";
-import {
-  avatars,
-  account,
-  updateAvatar,
-  getUserInfo,
-} from "@/constants/appwriteConfig"; // Import getUserInfo và updateAvatar
+import { getUserInfo, updateAvatar } from "@/constants/AppwriteUser";
+import { avatars } from "@/constants/AppwriteClient";
 
 const DisplayAvatar = ({ userId }: { userId: string }) => {
   const [userInfo, setUserInfo] = useState<{

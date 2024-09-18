@@ -11,11 +11,11 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator"; // Import ImageManipulator
-import { createPost } from "@/constants/appwriteConfig"; // Import phương thức createPost
 import RichTextEditor from "../RichTextEditor";
 import MediaPreview from "../MediaPreview"; // Import component MediaPreview
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { createPost } from "@/constants/AppwritePost";
 
 interface CreatePostProps {
   onPost: (post: {

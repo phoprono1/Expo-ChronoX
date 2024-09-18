@@ -1,18 +1,15 @@
 import { View, Text } from "react-native";
 import React, { useEffect, useState } from "react";
-import {
-  account,
-  databases,
-  config,
-  updateAvatar,
-  signOutUser,
-} from "@/constants/appwriteConfig"; // Import phương thức signOutUser
+
 import { useRouter } from "expo-router";
 import DisplayAvatar from "@/components/cards/UserProfile";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Query } from "react-native-appwrite";
 import { useBottomSheet } from '@/hooks/BottomSheetProvider'; // Import useBottomSheet
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { account, databases } from "@/constants/AppwriteClient";
+import { config } from "@/constants/Config";
+import { signOutUser } from "@/constants/AppwriteUser";
 
 const Profile = () => {
   const { isVisible } = useBottomSheet(); // Lấy trạng thái từ context

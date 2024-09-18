@@ -1,7 +1,7 @@
 import { View, Text, TextInput, Button } from "react-native";
-import { createUser } from '@/constants/appwriteConfig'; // Import phương thức createUser
 import { Link, router } from "expo-router";
 import { useState } from "react";
+import { createUser } from "@/constants/AppwriteUser";
 
 export default function SignUp() {
   const [email, setEmail] = useState('');

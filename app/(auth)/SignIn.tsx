@@ -1,8 +1,8 @@
 import { View, Text, TextInput, Button } from "react-native";
-import { signInUser } from "@/constants/appwriteConfig"; // Import phương thức signInUser
 import { Link, useRouter } from "expo-router"; // Sử dụng useRouter thay vì useNavigation
 import { useState } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { signInUser } from "@/constants/AppwriteUser";
 
 export default function SignIn() {
   const [email, setEmail] = useState('');

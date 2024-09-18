@@ -19,9 +19,13 @@ interface PostCardProps {
   mediaUri: string[]; // Đổi thành mảng để hỗ trợ nhiều media
   title: string;
   hashtags: string[];
+  likes: number;
+  comments: number;
+  isLiked: boolean;
   onLike: () => void;
   onComment: () => void;
   onShare: () => void;
+  showMoreOptionsIcon?: boolean; // Thêm thuộc tính này
 }
 
 const PostCard: React.FC<PostCardProps> = ({
@@ -31,11 +35,15 @@ const PostCard: React.FC<PostCardProps> = ({
   mediaUri,
   title,
   hashtags,
+  likes,
+  comments,
+  isLiked,
   onLike,
   onComment,
   onShare,
+  showMoreOptionsIcon = true, // Mặc định là true
 }) => {
-  const [liked, setLiked] = useState(false); // Trạng thái thích
+  const [liked, setLiked] = useState(isLiked); // Trạng thái thích
   const { width: windowWidth } = Dimensions.get("window"); // Lấy chiều rộng màn hình
   const [mediaTypes, setMediaTypes] = useState<string[]>([]); // Lưu trữ loại media
 
@@ -54,6 +62,11 @@ const PostCard: React.FC<PostCardProps> = ({
     h4: textStyle,
   };
 
+  // Cập nhật trạng thái liked khi isLiked props thay đổi
+  useEffect(() => {
+    setLiked(isLiked);
+  }, [isLiked]);
+
   const handleLike = async () => {
     setLiked(!liked); // Đảo ngược trạng thái thích
     await onLike(); // Gọi hàm onLike
@@ -62,6 +75,10 @@ const PostCard: React.FC<PostCardProps> = ({
   const handleShare = () => {
     // Thêm logic chia sẻ ở đây
     onShare();
+  };
+
+  const showMoreOptions = () => {
+    console.log("Show more options");
   };
 
   // Hàm kiểm tra MIME type
@@ -170,9 +187,11 @@ const PostCard: React.FC<PostCardProps> = ({
           <Text className="font-bold text-lightgray-500">{username}</Text>
           <Text className="text-lightgray-500">{email}</Text>
         </View>
-        <Pressable className="ml-auto">
-          <Ionicons name="ellipsis-horizontal" size={24} color="black" />
-        </Pressable>
+        {showMoreOptionsIcon && (
+          <Pressable className="ml-auto" onPress={showMoreOptions}>
+            <Ionicons name="ellipsis-horizontal" size={24} color="black" />
+          </Pressable>
+        )}
       </View>
 
       {mediaUri.length > 0 && ( // Kiểm tra nếu mảng mediaUri không rỗng
@@ -203,14 +222,14 @@ const PostCard: React.FC<PostCardProps> = ({
             size={20}
             color="red"
           />
-          <Text className="text-red-500 ml-1">0</Text>
+          <Text className="text-red-500 ml-1">{likes}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={onComment}
           className="flex flex-row items-center mr-4" // Thêm margin-right để tạo khoảng cách
         >
           <Ionicons name="chatbox-ellipses-outline" size={20} color="black" />
-          <Text className="text-slate-600 ml-1">0</Text>
+          <Text className="text-slate-600 ml-1">{comments}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleShare}
