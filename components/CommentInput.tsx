@@ -20,7 +20,7 @@ import {
   createComment,
   getCommentsByPostId,
 } from "@/constants/AppwritePost"; // Import hàm để lấy bài viết
-import { getUserById } from "@/constants/AppwriteUser";
+import { getCurrentUserId, getUserById } from "@/constants/AppwriteUser";
 import { account, client } from "@/constants/AppwriteClient";
 import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 import CommentItem from "./CommentItem";
@@ -58,8 +58,10 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
   const loadCurrentUserId = async () => {
     try {
       const currentAccount = await account.get();
-      const currentUserId = await getUserById(currentAccount.$id);
-      setCurrentUserId(currentUserId.$id);
+      console.log("currentAccount:", currentAccount);
+      const currentUserId = await getCurrentUserId(currentAccount.$id);
+      console.log("currentUserId:", currentUserId);
+      setCurrentUserId(currentUserId);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin người dùng:", error);
     }
@@ -67,7 +69,10 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
 
   // Hàm để lấy thông tin bài viết
   const loadPostData = async () => {
-    if (currentUserId == null) loadCurrentUserId();
+    if (currentUserId == null) {
+      console.log("currentUserId chưa được thiết lập.");
+      loadCurrentUserId();
+    }
     try {
       const data = await fetchPostById(postId);
       const userInfo = await getUserById(data.accountID.accountID);
@@ -94,30 +99,36 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
   useEffect(() => {
     loadCurrentUserId();
     loadPostData(); // Gọi hàm khi component được khởi tạo
+  }, [postId]);
 
+  useEffect(() => {
+    if (currentUserId) {
+      console.log("currentUserId đã được thiết lập:", currentUserId);
+      loadPostData(); // Gọi loadPosts khi currentUserId đã được thiết lập
+    } else {
+      console.log("currentUserId vẫn là null");
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
     const subscription = client.subscribe(
       `databases.${config.databaseId}.collections.${config.commentCollectionId}.documents`,
       async (response) => {
         console.log("Bình luận mới đã được tạo:", response.payload);
         if (!currentUserId) {
           console.log("currentUserId chưa được thiết lập.");
-          return; // Dừng lại nếu currentUserId chưa có giá trị
+          await loadCurrentUserId(); // Đợi cho đến khi currentUserId được thiết lập
         }
-        loadPostData();
+        console.log("currentUserId đã được thiết lập:", currentUserId); // Kiểm tra giá trị ở đây
+        await loadPostData(); // Đảm bảo currentUserId đã có giá trị
       }
     );
 
     return () => {
       subscription();
     };
-  }, [postId]);
-
-  useEffect(() => {
-    if (currentUserId) {
-      loadPostData(); // Gọi loadPosts khi currentUserId đã được thiết lập
-    }
   }, [currentUserId]);
-
+  
   const handleLike = async () => {
     if (!postData) return; // Kiểm tra xem postData có tồn tại không
 

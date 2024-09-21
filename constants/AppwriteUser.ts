@@ -142,6 +142,25 @@ export const getUserById = async (userId: string) => {
   }
 };
 
+// Hàm lấy id người dùng hiện tại
+export const getCurrentUserId = async (userId: string) => {
+  try {
+    const userDocuments = await databases.listDocuments(
+      config.databaseId,
+      config.userCollectionId,
+      [Query.equal("accountID", userId)]
+    );
+
+    if (userDocuments.documents.length > 0) {
+      return userDocuments.documents[0].$id; // Trả về thông tin người dùng đầu tiên
+    } else {
+      throw new Error("Không tìm thấy người dùng.");
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy thông tin người dùng:", error);
+    throw error;
+  }
+};
 // Phương thức đăng xuất
 export const signOutUser = async () => {
   try {

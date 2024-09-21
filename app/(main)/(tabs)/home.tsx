@@ -19,7 +19,7 @@ import Animated, {
 import { BlurView } from "expo-blur";
 
 import { account, client } from "@/constants/AppwriteClient";
-import { getUserById } from "@/constants/AppwriteUser";
+import { getCurrentUserId, getUserById } from "@/constants/AppwriteUser";
 import {
   fetchPostById,
   fetchPostByStatisticsId,
@@ -45,8 +45,8 @@ const Home = () => {
   const loadCurrentUserId = async () => {
     try {
       const currentAccount = await account.get();
-      const currentUserId = await getUserById(currentAccount.$id);
-      setCurrentUserId(currentUserId.$id);
+      const currentUserId = await getCurrentUserId(currentAccount.$id);
+      setCurrentUserId(currentUserId);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin người dùng:", error);
     }
@@ -169,43 +169,43 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe_like_comment = client.subscribe(
-      `databases.${config.databaseId}.collections.${config.statisticsPostCollectionId}.documents`,
-      async (response) => {
-        console.log("Thông tin bài viết mới đã được cập nhật:", response.payload);
-        const payload = JSON.parse(JSON.stringify(response.payload)); // Chuyển đổi payload về đối tượng
-  
-        // Lấy ID bài viết từ payload
-        const statisticsPostId = payload.$id;
-        const postId = await fetchPostByStatisticsId(statisticsPostId);
-        console.log("ID bài viết:", postId.$id);
-        const updatedLikes = payload.likes; // Giả sử payload chứa số lượng likes mới
-        const updatedComments = payload.comments; // Giả sử payload chứa số lượng comments mới
-        console.log("số lượng likes:", updatedLikes);
-        console.log("số lượng comments:", updatedComments);
-  
-        // Kiểm tra currentUserId trước khi tiếp tục
-        if (!currentUserId) {
-          console.log("currentUserId chưa được thiết lập.");
-          return; // Dừng lại nếu currentUserId chưa có giá trị
-        }
-  
-        // Cập nhật số lượng likes cho bài viết tương ứng
-        console.log("ID bài viết nào đó:", postId.$id);
-        const liked = await isPostLiked(postId.$id, currentUserId);
-        console.log("Đã like chưa:", liked);
-        setPosts((prevPosts) =>
-          prevPosts.map((post) =>
-            post.$id === postId.$id ? { ...post, likes: updatedLikes, comments: updatedComments, isLiked: liked } : post
-          )
-        );
+  const unsubscribe_like_comment = client.subscribe(
+    `databases.${config.databaseId}.collections.${config.statisticsPostCollectionId}.documents`,
+    async (response) => {
+      console.log("Thông tin bài viết mới đã được cập nhật:", response.payload);
+      const payload = JSON.parse(JSON.stringify(response.payload)); // Chuyển đổi payload về đối tượng
+
+      // Lấy ID bài viết từ payload
+      const statisticsPostId = payload.$id;
+      const postId = await fetchPostByStatisticsId(statisticsPostId);
+      console.log("ID bài viết:", postId.$id);
+      const updatedLikes = payload.likes; // Giả sử payload chứa số lượng likes mới
+      const updatedComments = payload.comments; // Giả sử payload chứa số lượng comments mới
+      console.log("số lượng likes:", updatedLikes);
+      console.log("số lượng comments:", updatedComments);
+
+      // Kiểm tra currentUserId trước khi tiếp tục
+      if (!currentUserId) {
+        console.log("currentUserId chưa được thiết lập.");
+        return; // Dừng lại nếu currentUserId chưa có giá trị
       }
-    );
-  
-    return () => {
-      unsubscribe_like_comment();
-    };
-  }, [currentUserId]); // Thêm currentUserId vào dependency array
+
+      // Cập nhật số lượng likes cho bài viết tương ứng
+      console.log("ID bài viết nào đó:", postId.$id);
+      const liked = await isPostLiked(postId.$id, currentUserId);
+      console.log("Đã like chưa:", liked);
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.$id === postId.$id ? { ...post, likes: updatedLikes, comments: updatedComments, isLiked: liked } : post
+        )
+      );
+    }
+  );
+
+  return () => {
+    unsubscribe_like_comment();
+  };
+}, [currentUserId]); // Thêm currentUserId vào dependency array
 
   React.useEffect(() => {
     scale.value = withTiming(isVisible ? 0.8 : 1, { duration: 200 });
