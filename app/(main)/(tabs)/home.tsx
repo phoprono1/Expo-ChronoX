@@ -52,6 +52,19 @@ const Home = () => {
     }
   };
 
+  useEffect(() => {
+    loadCurrentUserId(); // Gọi hàm để lấy ID người dùng hiện tại
+  }, []);
+
+  useEffect(() => {
+    if (currentUserId) {
+      console.log("currentUserId đã được thiết lập:", currentUserId);
+      loadPosts(); // Gọi loadPosts khi currentUserId đã được thiết lập
+    } else {
+      console.log("currentUserId vẫn là null");
+    }
+  }, [currentUserId]);
+
   const loadPosts = async () => {
     console.log("currentUserId hiện tại: ", currentUserId);
     if (!currentUserId) loadCurrentUserId(); // Kiểm tra xem currentUserId đã được lấy chưa
@@ -119,19 +132,6 @@ const Home = () => {
   };
 
   useEffect(() => {
-    loadCurrentUserId(); // Gọi hàm để lấy ID người dùng hiện tại
-  }, []);
-
-  useEffect(() => {
-    if (currentUserId) {
-      console.log("currentUserId đã được thiết lập:", currentUserId);
-      loadPosts(); // Gọi loadPosts khi currentUserId đã được thiết lập
-    } else {
-      console.log("currentUserId vẫn là null");
-    }
-  }, [currentUserId]);
-
-  useEffect(() => {
     const unsubscribe = client.subscribe(
       `databases.${config.databaseId}.collections.${config.postCollectionId}.documents`,
       async (response) => {
@@ -174,6 +174,7 @@ const Home = () => {
       async (response) => {
         console.log("Thông tin bài viết mới đã được cập nhật:", response.payload);
         const payload = JSON.parse(JSON.stringify(response.payload)); // Chuyển đổi payload về đối tượng
+  
         // Lấy ID bài viết từ payload
         const statisticsPostId = payload.$id;
         const postId = await fetchPostByStatisticsId(statisticsPostId);
@@ -182,13 +183,20 @@ const Home = () => {
         const updatedComments = payload.comments; // Giả sử payload chứa số lượng comments mới
         console.log("số lượng likes:", updatedLikes);
         console.log("số lượng comments:", updatedComments);
+  
+        // Kiểm tra currentUserId trước khi tiếp tục
+        if (!currentUserId) {
+          console.log("currentUserId chưa được thiết lập.");
+          return; // Dừng lại nếu currentUserId chưa có giá trị
+        }
+  
         // Cập nhật số lượng likes cho bài viết tương ứng
         console.log("ID bài viết nào đó:", postId.$id);
-        const liked = await isPostLiked(postId.$id, currentUserId ?? "");
+        const liked = await isPostLiked(postId.$id, currentUserId);
         console.log("Đã like chưa:", liked);
         setPosts((prevPosts) =>
           prevPosts.map((post) =>
-            post.$id === postId.$id ? { ...post, likes: updatedLikes, comments: updatedComments, isLiked: liked} : post
+            post.$id === postId.$id ? { ...post, likes: updatedLikes, comments: updatedComments, isLiked: liked } : post
           )
         );
       }
@@ -197,7 +205,7 @@ const Home = () => {
     return () => {
       unsubscribe_like_comment();
     };
-  }, []);
+  }, [currentUserId]); // Thêm currentUserId vào dependency array
 
   React.useEffect(() => {
     scale.value = withTiming(isVisible ? 0.8 : 1, { duration: 200 });

@@ -1,5 +1,5 @@
 export const config = {
-  endpoint: "http://192.168.1.4/v1",
+  endpoint: "http://192.168.1.6/v1",
   platform: "com.hoangpho.chronox",
   projectId: "66d2b51d003002a3b407",
   databaseId: "66d442f4000eac24b59f",

@@ -99,6 +99,10 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
       `databases.${config.databaseId}.collections.${config.commentCollectionId}.documents`,
       async (response) => {
         console.log("Bình luận mới đã được tạo:", response.payload);
+        if (!currentUserId) {
+          console.log("currentUserId chưa được thiết lập.");
+          return; // Dừng lại nếu currentUserId chưa có giá trị
+        }
         loadPostData();
       }
     );
