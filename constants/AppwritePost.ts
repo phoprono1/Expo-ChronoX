@@ -383,3 +383,21 @@ export const getCommentsByPostId = async (postId: string) => {
     throw error; // Ném lỗi để xử lý ở nơi gọi hàm
   }
 };
+
+// Hàm lấy số lượng bài viết mà người dùng hiện tại đã đăng
+export const getUserPostsCount = async (userId: string) => {
+  try {
+    const posts = await databases.listDocuments(
+      config.databaseId,
+      config.postCollectionId,
+      [Query.equal("accountID", userId)]
+    );
+
+    console.log("Số lượng bài viết của người dùng:" + userId, posts.documents.length);
+
+    return posts.documents.length; // Trả về số lượng bài viết
+  } catch (error) {
+    console.error("Lỗi khi lấy số lượng bài viết:", error);
+    throw error; // Ném lỗi để xử lý ở nơi gọi hàm
+  }
+};

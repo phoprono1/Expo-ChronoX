@@ -7,14 +7,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Query } from "react-native-appwrite";
 import { useBottomSheet } from '@/hooks/BottomSheetProvider'; // Import useBottomSheet
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { account, databases } from "@/constants/AppwriteClient";
+import { account, client, databases } from "@/constants/AppwriteClient";
 import { config } from "@/constants/Config";
-import { signOutUser } from "@/constants/AppwriteUser";
+import { getUserById, signOutUser } from "@/constants/AppwriteUser";
+import { fetchPostById } from "@/constants/AppwritePost";
 
 const Profile = () => {
   const { isVisible } = useBottomSheet(); // Lấy trạng thái từ context
   const scale = useSharedValue(1); // Khởi tạo giá trị chia sẻ cho kích thước
   const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null); // Thêm state cho avatar
   const router = useRouter(); // Khởi tạo router
 
@@ -36,6 +38,7 @@ const Profile = () => {
         if (userDocuments.documents.length > 0) {
           const userDocument = userDocuments.documents[0];
           setEmail(userDocument.email); // Lấy email từ thông tin người dùng
+          setUserId(userDocument.$id); // Lấy userId từ thông tin người dùng
           setAvatar(userDocument.avatar); // Lấy avatar từ document
         }
       } catch (error) {
@@ -67,7 +70,7 @@ const Profile = () => {
     <Animated.View style={[{ flex: 1, width: '100%', alignItems: 'center', padding: 16, backgroundColor: 'white' }, animatedStyle]}>
       <View className="w-full">
         <View className="justify-center">
-          <DisplayAvatar userId={email} />
+          <DisplayAvatar userId={userId} />
         </View>
       </View>
       <View className="absolute bottom-20 p-2 rounded-lg">

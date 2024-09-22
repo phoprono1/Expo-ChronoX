@@ -40,7 +40,7 @@ export const BottomSheetProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentPostId, setCurrentPostId] = useState<string | null>(null); // Thêm state để lưu postId
   // Sử dụng useMemo để tính toán snapPoints dựa trên currentAction
   const snapPoints = useMemo(() => {
-    return currentAction === "createPost" ? ["90%"] : ["95%"];
+    return currentAction === "createPost" ? ["90%"] : ["94%"];
   }, [currentAction]);
 
   const openBottomSheet = (

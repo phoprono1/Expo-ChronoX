@@ -36,6 +36,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
   const [comment, setComment] = useState("");
   const [postData, setPostData] = useState<any>(null); // State để lưu thông tin bài viết
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false); // State để theo dõi trạng thái bàn phím
 
   const handleSubmit = async () => {
     console.log("Comment: ", comment);
@@ -111,6 +112,26 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
   }, [currentUserId]);
 
   useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => {
+        setKeyboardVisible(true); // Bàn phím hiện ra
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => {
+        setKeyboardVisible(false); // Bàn phím ẩn
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  useEffect(() => {
     const subscription = client.subscribe(
       `databases.${config.databaseId}.collections.${config.commentCollectionId}.documents`,
       async (response) => {
@@ -128,7 +149,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
       subscription();
     };
   }, [currentUserId]);
-  
+
   const handleLike = async () => {
     if (!postData) return; // Kiểm tra xem postData có tồn tại không
 
@@ -153,7 +174,10 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
 
   return (
     <View>
-      <ScrollView className="p-4 mb-16">
+      <ScrollView
+        className="p-4 mb-16"
+        contentContainerStyle={{ paddingBottom: keyboardVisible ? 310 : 0 }} // Thêm khoảng cách khi bàn phím hiện ra
+      >
         {postData ? (
           <>
             <PostCard
@@ -189,7 +213,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
       </ScrollView>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 20}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 70 : 20}
         style={{
           position: "absolute",
           bottom: 0,

@@ -26,6 +26,11 @@ export const createUser = async (
         username,
         email,
         avatar,
+        bio: "",
+        followed: 0,
+        follower: 0,
+        location: null,
+        website: null,
       }
     );
     console.log("Thông tin người dùng đã được lưu:", userDocument);
@@ -113,6 +118,7 @@ export const getUserInfo = async () => {
     );
 
     if (userDocuments.documents.length > 0) {
+      console.log("Thông tin người dùng:", userDocuments.documents[0]);
       return userDocuments.documents[0]; // Trả về tài liệu người dùng
     }
     throw new Error("Không tìm thấy tài liệu người dùng.");
