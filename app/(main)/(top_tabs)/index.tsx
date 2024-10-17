@@ -1,41 +1,35 @@
 import {
-  SafeAreaView,
-  View,
-  RefreshControl,
-  Text,
   FlatList,
+  ActivityIndicator,
+  SafeAreaView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
   Share,
-  TouchableOpacity,
+  View,
 } from "react-native";
-
 import React, { useEffect, useState } from "react";
-import PostCard from "@/components/cards/PostCard";
-import { useBottomSheet } from "@/hooks/BottomSheetProvider";
+import { getCurrentUserId, getUserById } from "@/constants/AppwriteUser";
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
-  withTiming,
+  useSharedValue,
 } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
-
-import { account, client } from "@/constants/AppwriteClient";
-import { getCurrentUserId, getUserById, updateUserStatus } from "@/constants/AppwriteUser";
+import { account } from "@/constants/AppwriteClient";
 import {
-  fetchPostById,
-  fetchPostByStatisticsId,
-  fetchPostsFirst,
-  fetchPostsNext,
+  fetchUserPostsFirst,
+  fetchUserPostsNext,
   getPostStatistics,
   isPostLiked,
   toggleLikePost,
 } from "@/constants/AppwritePost";
-import { config } from "@/constants/Config";
-import { getFile, getFileDownload } from "@/constants/AppwriteFile";
-import { router, useLocalSearchParams } from "expo-router";
-import { useDispatch } from "react-redux";
+import PostCard from "@/components/cards/PostCard"; // Import component PostCard
+import DisplayAvatar from "@/components/cards/UserProfile";
+import { useDispatch, useSelector } from "react-redux";
+import { setMinimized } from "@/store/minimizeSlice";
+import { getFileDownload } from "@/constants/AppwriteFile";
+import { useBottomSheet } from "@/hooks/BottomSheetProvider";
 
-const Home = () => {
-  const { isVisible } = useBottomSheet();
+const Index = () => {
+  // Sử dụng kiểu đã định nghĩa
   const scale = useSharedValue(1);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,15 +37,24 @@ const Home = () => {
   const [lastID, setLastID] = useState<string | null>(null);
   const [limit, setLimit] = useState(3);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const { openBottomSheet } = useBottomSheet();
   const dispatch = useDispatch();
+  const isMinimized = useSelector((state: any) => state.minimize.isMinimized); // Lấy trạng thái isMinimized từ Redux
+  const { openBottomSheet } = useBottomSheet();
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    if (offsetY > 100) {
+      dispatch(setMinimized(true)); // Cập nhật trạng thái isMinimized
+    } else {
+      dispatch(setMinimized(false));
+    }
+  };
 
   const loadCurrentUserId = async () => {
     try {
       const currentAccount = await account.get();
       const currentUserId = await getCurrentUserId(currentAccount.$id);
       setCurrentUserId(currentUserId);
-      await updateUserStatus(currentUserId, 'online');
     } catch (error) {
       console.error("Lỗi khi lấy thông tin người dùng:", error);
     }
@@ -72,10 +75,10 @@ const Home = () => {
 
   const loadPosts = async () => {
     console.log("currentUserId hiện tại: ", currentUserId);
-    if (!currentUserId) loadCurrentUserId(); // Kiểm tra xem currentUserId đã được lấy chưa
+    if (!currentUserId) return; // Dừng lại nếu currentUserId chưa có giá trị
     setLoading(true);
     try {
-      const fetchedPosts = await fetchPostsFirst(limit);
+      const fetchedPosts = await fetchUserPostsFirst(currentUserId, limit);
       const postsWithUserInfo = await Promise.all(
         fetchedPosts.map(async (post) => {
           const userInfo = await getUserById(post.accountID.accountID);
@@ -107,10 +110,16 @@ const Home = () => {
     if (!currentUserId || loadingNext || !lastID) return;
     setLoadingNext(true);
     try {
-      const fetchedPosts = await fetchPostsNext(lastID, limit);
-      const uniquePosts = fetchedPosts.documents.filter(
+      const fetchedPosts = await fetchUserPostsNext(
+        currentUserId,
+        lastID,
+        limit
+      );
+      console.log("Sự kiện load thêm post đã được kích hoạt 1:", fetchedPosts);
+      const uniquePosts = fetchedPosts.filter(
         (post) => !posts.some((existingPost) => existingPost.$id === post.$id)
       );
+  
       const postsWithUserInfo = await Promise.all(
         uniquePosts.map(async (post) => {
           const userInfo = await getUserById(post.accountID.accountID);
@@ -125,6 +134,10 @@ const Home = () => {
           };
         })
       );
+  
+      // Log postsWithUserInfo để kiểm tra
+      console.log("Posts with user info:", postsWithUserInfo);
+  
       setPosts((prevPosts) => [...prevPosts, ...postsWithUserInfo]);
       setLastID(
         uniquePosts.length > 0 ? uniquePosts[uniquePosts.length - 1].$id : null
@@ -135,102 +148,6 @@ const Home = () => {
       setLoadingNext(false);
     }
   };
-
-  useEffect(() => {
-    const unsubscribe = client.subscribe(
-      `databases.${config.databaseId}.collections.${config.postCollectionId}.documents`,
-      async (response) => {
-        console.log("Bài viết mới đã được tạo:", response.payload);
-        const payload = JSON.parse(JSON.stringify(response.payload)); // Chuyển đổi payload về đối tượng
-
-        console.log("payload:", payload);
-        const newPostId = payload.$id; // Lấy $id từ payload
-        console.log("ID bài viết mới:", newPostId);
-
-        // Lấy thông tin bài viết mới
-        const newPost = await fetchPostById(newPostId); // Gọi hàm để lấy thông tin bài viết mới
-
-        // Lấy thông tin người dùng từ accountID
-        const userInfo = await getUserById(newPost.accountID.accountID); // Hàm này cần được tạo để lấy thông tin người dùng
-        const liked = await isPostLiked(newPost.$id, currentUserId ?? "");
-        const statisticsPost = (await getPostStatistics(newPost.$id)) || 0;
-
-        // Kết hợp thông tin bài viết và người dùng
-        const postWithUserInfo = {
-          ...newPost,
-          userInfo, // Thêm thông tin người dùng vào bài viết
-          isLiked: liked,
-          likes: statisticsPost.likes || 0,
-          comments: statisticsPost.comments || 0,
-        };
-
-        setPosts((prevPosts) => [postWithUserInfo, ...prevPosts]); // Thêm bài viết mới vào đầu danh sách
-      }
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe_like_comment = client.subscribe(
-      `databases.${config.databaseId}.collections.${config.statisticsPostCollectionId}.documents`,
-      async (response) => {
-        console.log(
-          "Thông tin bài viết mới đã được cập nhật:",
-          response.payload
-        );
-        const payload = JSON.parse(JSON.stringify(response.payload)); // Chuyển đổi payload về đối tượng
-
-        // Lấy ID bài viết từ payload
-        const statisticsPostId = payload.$id;
-        const postId = await fetchPostByStatisticsId(statisticsPostId);
-        console.log("ID bài viết:", postId.$id);
-        const updatedLikes = payload.likes; // Giả sử payload chứa số lượng likes mới
-        const updatedComments = payload.comments; // Giả sử payload chứa số lượng comments mới
-        console.log("số lượng likes:", updatedLikes);
-        console.log("số lượng comments:", updatedComments);
-
-        // Kiểm tra currentUserId trước khi tiếp tục
-        if (!currentUserId) {
-          console.log("currentUserId chưa được thiết lập.");
-          return; // Dừng lại nếu currentUserId chưa có giá trị
-        }
-
-        // Cập nhật số lượng likes cho bài viết tương ứng
-        console.log("ID bài viết nào đó:", postId.$id);
-        const liked = await isPostLiked(postId.$id, currentUserId);
-        console.log("Đã like chưa:", liked);
-        setPosts((prevPosts) =>
-          prevPosts.map((post) =>
-            post.$id === postId.$id
-              ? {
-                  ...post,
-                  likes: updatedLikes,
-                  comments: updatedComments,
-                  isLiked: liked,
-                }
-              : post
-          )
-        );
-      }
-    );
-
-    return () => {
-      unsubscribe_like_comment();
-    };
-  }, [currentUserId]); // Thêm currentUserId vào dependency array
-
-  React.useEffect(() => {
-    scale.value = withTiming(isVisible ? 0.8 : 1, { duration: 200 });
-  }, [isVisible]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
 
   const handleLike = async (postId: string, index: number) => {
     const post = posts[index];
@@ -250,17 +167,16 @@ const Home = () => {
     console.log("Liked post with ID:", postId);
   };
 
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
   // Tạo hàm handleComment
   const handleComment = (postId: string) => {
     openBottomSheet("comment", postId); // Mở modal bình luận và truyền postId
     console.log("Commented on post with ID:", postId);
-  };
-
-  const handleUserInfo = (userId: string) => {
-    router.push({
-      pathname: "../(main)/(functions)/userInfo/[userInfo]",
-      params: { userInfoId: userId, currentUserId: currentUserId },
-    });
   };
   // Hàm chia sẻ file
   const handleShareFile = async (
@@ -299,7 +215,7 @@ const Home = () => {
   const renderItem = ({ item, index }: { item: any; index: number }) => (
     <Animated.View
       style={animatedStyle}
-      className="flex-1 p-1 w-full bg-white border-2 border-gray-300 rounded-3xl mb-5 shadow-md"
+      className="flex-1 p-1 w-full bg-white border-2 border-gray-300 rounded-3xl mb-10 shadow-md"
       key={item.$id}
     >
       <PostCard
@@ -312,10 +228,10 @@ const Home = () => {
         likes={item.likes}
         comments={item.comments}
         isLiked={item.isLiked}
-        onUserInfoPress={() => handleUserInfo(item.userInfo.$id)}
+        onUserInfoPress={() => {}}
+        onLike={() => handleLike(item.$id, index)} // Gọi hàm handleLike
         onTitlePress={() => handleComment(item.$id)}
         onHashtagPress={() => {}}
-        onLike={() => handleLike(item.$id, index)} // Gọi hàm handleLike
         onComment={() => handleComment(item.$id)}
         onShare={() =>
           handleShareFile(
@@ -325,37 +241,37 @@ const Home = () => {
             item.title
           )
         }
-        showMoreOptionsIcon={true}
+        showMoreOptionsIcon={false}
       />
     </Animated.View>
   );
 
   return (
-    <View className="flex-1 bg-white m-2">
-      <BlurView
-        intensity={90}
-        tint="light"
-        style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }}
-      >
-        <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1 bg-white">
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <SafeAreaView className="flex-1 mb-16 mt-2">
           <FlatList
             data={posts}
             renderItem={renderItem}
             keyExtractor={(item) => item.$id}
-            refreshControl={
-              <RefreshControl onRefresh={loadPosts} refreshing={loading} />
-            }
-            ListEmptyComponent={<Text>Loading...</Text>}
             onEndReached={loadMorePosts}
             onEndReachedThreshold={0.5}
             ListFooterComponent={
-              loadingNext ? <Text>Đang tải thêm...</Text> : null
+              loadingNext ? (
+                <ActivityIndicator size="small" color="#0000ff" />
+              ) : null
             }
+            style={{ flex: 1 }}
+            scrollEventThrottle={16}
+            onScroll={handleScroll} // Thêm sự kiện cuộn
           />
         </SafeAreaView>
-      </BlurView>
-    </View>
+      )}
+      <View className="mb-24"></View>
+    </SafeAreaView>
   );
 };
 
-export default Home;
+export default Index;

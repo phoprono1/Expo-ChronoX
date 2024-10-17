@@ -59,6 +59,20 @@ export const signInUser = async (email: string, password: string) => {
   }
 };
 
+export const updateUserStatus = async (userId: string, status: 'online' | 'offline') => {
+  try {
+    await databases.updateDocument(
+      config.databaseId,
+      config.userCollectionId,
+      userId,
+      { status: status }
+    );
+    console.log(`User status updated to ${status}`);
+  } catch (error) {
+    console.error('Error updating user status:', error);
+  }
+};
+
 // Phương thức cập nhật avatar
 export const updateAvatar = async (newAvatarUri: string) => {
   try {
@@ -140,7 +154,7 @@ export const getUserById = async (userId: string) => {
     if (userDocuments.documents.length > 0) {
       return userDocuments.documents[0]; // Trả về thông tin người dùng đầu tiên
     } else {
-      throw new Error("Không tìm thấy người dùng.");
+      throw new Error("Không tìm thấy người dùng. 123");
     }
   } catch (error) {
     console.error("Lỗi khi lấy thông tin người dùng:", error);

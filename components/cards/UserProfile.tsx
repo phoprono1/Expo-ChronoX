@@ -3,12 +3,25 @@ import { SafeAreaView, Text, TouchableOpacity, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { Image } from "expo-image";
-import { getUserById, getUserInfo, updateAvatar } from "@/constants/AppwriteUser";
+import {
+  getUserById,
+  getUserInfo,
+  updateAvatar,
+} from "@/constants/AppwriteUser";
 import { avatars, client } from "@/constants/AppwriteClient";
 import { fetchPostById, getUserPostsCount } from "@/constants/AppwritePost";
 import { config } from "@/constants/Config";
+import { useSelector } from "react-redux";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
-const DisplayAvatar = ({ userId }: { userId: string }) => {
+const DisplayAvatar = () => {
+  const user = useSelector((state: any) => state.user); // Lấy trạng thái người dùng từ Redux
+  const isMinimized = useSelector((state: any) => state.minimize.isMinimized); // Lấy trạng thái isMinimized từ Redux
+
   const [userInfo, setUserInfo] = useState<{
     name: string;
     email: string;
@@ -31,12 +44,21 @@ const DisplayAvatar = ({ userId }: { userId: string }) => {
     postsCount: 0, // Khởi tạo postsCount
   });
 
+  // Khởi tạo giá trị cho scale và position
+  const avatarScale = useSharedValue(1);
+  const avatarPositionX = useSharedValue(0);
+  const avatarPositionY = useSharedValue(0);
+  const followScale = useSharedValue(1); // Thêm giá trị scale cho follow, follower, posts
+
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
         const userDocument = await getUserInfo(); // Gọi hàm getUserInfo từ appwriteConfig
-        const postsCount = await getUserPostsCount(userId); // Gọi hàm getUserPostsCount từ appwriteConfig
-        console.log("Số lượng bài viết của người dùng:" + userId, postsCount);
+        const postsCount = await getUserPostsCount(user.userId); // Gọi hàm getUserPostsCount từ appwriteConfig
+        console.log(
+          "Số lượng bài viết của người dùng:" + user.userId,
+          postsCount
+        );
         setUserInfo({
           name: userDocument.username,
           email: userDocument.email,
@@ -54,7 +76,40 @@ const DisplayAvatar = ({ userId }: { userId: string }) => {
     };
 
     fetchUserInfo();
-  }, [userId]);
+  }, [user]);
+
+  useEffect(() => {
+    // Cập nhật scale và position khi isMinimized thay đổi
+    if (isMinimized) {
+      avatarScale.value = withTiming(0.5, { duration: 300 }); // Giảm kích thước avatar
+      avatarPositionX.value = withTiming(10, { duration: 300 }); // Di chuyển avatar đến góc trên trái
+      avatarPositionY.value = withTiming(10, { duration: 300 });
+      followScale.value = withTiming(0, { duration: 300 }); // Giảm kích thước các phần tử follow, follower, posts
+    } else {
+      avatarScale.value = withTiming(1, { duration: 300 }); // Trả về kích thước ban đầu
+      avatarPositionX.value = withTiming(0, { duration: 300 }); // Trả về vị trí ban đầu
+      avatarPositionY.value = withTiming(0, { duration: 300 });
+      followScale.value = withTiming(1, { duration: 300 }); // Giảm kích thước các phần tử follow, follower, posts
+    }
+  }, [isMinimized]);
+
+  const animatedAvatarStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { scale: avatarScale.value },
+        { translateX: avatarPositionX.value },
+        { translateY: avatarPositionY.value },
+      ],
+    };
+  });
+
+  const animatedFollowStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: followScale.value }],
+      opacity: followScale.value, // Thêm opacity để ẩn mượt mà
+
+    };
+  });
 
   const handleChangeAvatar = async () => {
     const permissionResult =
@@ -127,48 +182,85 @@ const DisplayAvatar = ({ userId }: { userId: string }) => {
   }, []);
 
   return (
-    <SafeAreaView className="bg-white p-4">
-      <View className="flex items-center">
+    <SafeAreaView className={`bg-white ${isMinimized ? "" : "p-4"}`}>
+      <View className={`flex ${isMinimized ? "flex-row" : "items-center"}`}>
         <TouchableOpacity onPress={handleChangeAvatar}>
-          <Image
+          <Animated.Image
             source={{
-              uri: userInfo.avatarUrl
-                ? userInfo.avatarUrl
-                : String(avatars.getInitials(userInfo.name, 30, 30)),
+              uri: user.avatar
+                ? user.avatar
+                : String(avatars.getInitials(user.name, 30, 30)),
             }}
-            className="w-32 h-32 rounded-full border-4 border-gray-300 mb-4"
+            style={[animatedAvatarStyle]} // Kích thước avatar
+            className="w-32 h-32 rounded-full border-4 border-gray-300"
           />
         </TouchableOpacity>
 
-        <Text className="font-bold text-2xl">{userInfo.name}</Text>
-        <Text className="text-gray-500 text-sm">{userInfo.email}</Text>
-        <Text className="text-gray-600 text-sm mt-2">{userInfo.bio}</Text>
+        <View
+          className={`flex flex-col ${isMinimized ? "mt-10" : "items-center"}`}
+        >
+          <Text
+            className={`font-bold text-2xl ${
+              isMinimized ? "" : "text-center"
+            } `}
+          >
+            {user.name}
+          </Text>
+          <Text
+            className={`text-gray-500 text-sm ${
+              isMinimized ? "" : "text-center"
+            } `}
+          >
+            {user.email}
+          </Text>
+        </View>
 
-        <View className="flex flex-row justify-center w-full">
+        <Text
+          className={`text-gray-600 text-sm mt-2 ${
+            isMinimized ? "hidden" : ""
+          }`}
+        >
+          {user.bio}
+        </Text>
+
+        <Animated.View
+          style={animatedFollowStyle}
+          className={`${
+            isMinimized ? "hidden" : "flex flex-row justify-center w-full"
+          }`}
+        >
           <View className="flex-1 items-center">
-            <Text className="font-bold">{userInfo.followed}</Text>
+            <Text className="font-bold">{user.followed}</Text>
             <Text className="text-gray-500 text-sm">Đã follow</Text>
           </View>
 
           <View className="flex-1 items-center">
-            <Text className="font-bold">{userInfo.follower}</Text>
+            <Text className="font-bold">{user.follower}</Text>
             <Text className="text-gray-500 text-sm">Follower</Text>
           </View>
 
           <View className="flex-1 items-center">
-            <Text className="font-bold">{userInfo.postsCount}</Text>
+            <Text className="font-bold">{user.postsCount}</Text>
             <Text className="text-gray-500 text-sm">Bài viết</Text>
           </View>
-        </View>
+        </Animated.View>
 
-        {userInfo.location && (
-          <Text className="text-gray-600 text-sm mt-2">
-            Vị trí: {userInfo.location}
+        {user.location && (
+          <Text
+            className={`text-gray-600 text-sm mt-2 ${
+              isMinimized ? "hidden" : ""
+            }`}
+          >
+            Vị trí: {user.location}
           </Text>
         )}
-        {userInfo.website && (
-          <Text className="text-gray-600 text-sm mt-2">
-            Website: {userInfo.website}
+        {user.website && (
+          <Text
+            className={`text-gray-600 text-sm mt-2 ${
+              isMinimized ? "hidden" : ""
+            }`}
+          >
+            Website: {user.website}
           </Text>
         )}
       </View>

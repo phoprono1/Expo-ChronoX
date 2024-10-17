@@ -11,6 +11,10 @@ const mimeTypeMap: { [key: string]: string } = {
   "text/plain": "txt",
 };
 
+export const getFileUrl = (fileId: string) => {
+  return `${config.endpoint}/storage/buckets/${config.storagePostId}/files/${fileId}/view?project=${config.projectId}`;
+};
+
 // Hàm lấy URL của tệp từ bucket bài viết
 export const getFileFromPostView = async (fileId: string) => {
   try {

@@ -1,12 +1,12 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-const PostDetail = () => {
+const Chat = () => {
   return (
     <View>
-      <Text>Hoàng Phố</Text>
+      <Text>Chat với người dùng ${}</Text>
     </View>
   )
 }
 
-export default PostDetail
+export default Chat

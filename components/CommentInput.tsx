@@ -184,26 +184,42 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
               avatar={postData.userInfo?.avatar || ""}
               username={postData.userInfo?.username || "Unknown User"}
               email={postData.userInfo?.email || "No Email"}
-              mediaUri={postData.mediaUri}
+              fileIds={postData.fileIds}
               title={postData.title}
               hashtags={postData.hashtags}
               likes={postData.likes}
               comments={postData.comments}
               isLiked={postData.isLiked}
               onLike={handleLike}
+              onTitlePress={() => {}}
+              onHashtagPress={() => {}}
+              onUserInfoPress={() => {}}
               onComment={() => {}}
               onShare={() => {
                 throw new Error("Function not implemented.");
               }}
               showMoreOptionsIcon={false}
             />
-            <View className="mt-4 mb-2 gap-4">
+            <View
+              className={`mt-4 mb-2 gap-4 ${
+                postData.mediaUri == null ? "" : "pb-80"
+              }`}
+            >
               <Text className="text-lg font-bold">Bình luận</Text>
               {postData.commentList.map((comment: any) => (
-                <CommentItem key={comment.$id} item={comment} />
+                <View
+                  key={comment.$id} // Đảm bảo rằng mỗi comment có một key duy nhất
+                  className={`${
+                    postData.commentList.length === 1 ? "pb-20" : ""
+                  }`}
+                >
+                  <CommentItem item={comment} />
+                </View>
               ))}
               {postData.commentList.length === 0 && (
-                <Text className="text-gray-500">Không có bình luận nào</Text>
+                <Text className="text-gray-500 p-20 text-center">
+                  Không có bình luận nào
+                </Text>
               )}
             </View>
           </>
@@ -213,15 +229,8 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
       </ScrollView>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 70 : 20}
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          padding: 0,
-          backgroundColor: "white",
-        }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 20}
+        className="absolute bottom-0 left-0 right-0 padding-0 bg-white"
       >
         <CommentInputField
           placeholder="Nhập bình luận..."

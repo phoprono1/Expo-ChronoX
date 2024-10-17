@@ -5,52 +5,50 @@ import { uploadFile, uploadPostFiles } from "./AppwriteFile";
 import { getUserInfo } from "./AppwriteUser";
 // Các phương thức liên quan đến bài viết như thích, không thích, lấy thống kê có thể được thêm vào đây.
 // Phương thức tạo bài viết
-// Phương thức tạo bài viết
 export const createPost = async (
   mediaUris: string[],
   title: string,
   hashtags: string[]
 ) => {
   try {
-    let uploadedFiles: { url: string; id: string }[] = []; // Khởi tạo mảng cho URL và ID file
+    let uploadedFiles: { id: string }[] = []; // Chỉ lưu ID của file
 
     // Nếu mediaUris không rỗng, tải file lên Storage
     if (mediaUris && mediaUris.length > 0) {
       const files = mediaUris.map((uri) => {
-        const fileExtension = uri.split(".").pop(); // Lấy phần mở rộng của file
-        const mimeType = fileExtension === "mp4" ? "video/mp4" : "image/jpeg"; // Xác định loại MIME
+        const fileExtension = uri.split(".").pop();
+        const mimeType = fileExtension === "mp4" ? "video/mp4" : "image/jpeg";
 
         return {
           uri,
-          fileName: `post_${Date.now()}.${fileExtension}`, // Tạo tên file duy nhất với phần mở rộng tương ứng
+          fileName: `post_${Date.now()}.${fileExtension}`,
           mimeType,
-          fileSize: 0, // Kích thước file, có thể cập nhật sau khi fetch
+          fileSize: 0,
         };
       });
 
-      // Tải lên tất cả các file và lấy URL và ID
-      uploadedFiles = await uploadPostFiles(files);
+      // Tải lên tất cả các file và chỉ lấy ID
+      uploadedFiles = (await uploadPostFiles(files)).map(file => ({ id: file.id }));
     }
 
     // Lấy ID của người dùng hiện tại
     const currentUser = await getUserInfo();
-    const userId = currentUser.$id; // Lấy ID người dùng
+    const userId = currentUser.$id;
     console.log("id người dùng: " + userId);
 
     // Tạo đối tượng bài viết
     const postDocument = {
-      mediaUri: uploadedFiles.map((file) => file.url), // Sử dụng mảng URL của các file đã tải lên
-      fileIds: uploadedFiles.map((file) => file.id), // Lưu ID của các file đã tải lên
+      fileIds: uploadedFiles.map((file) => file.id), // Chỉ lưu ID của các file đã tải lên
       title,
       hashtags,
-      accountID: userId, // Lưu ID người dùng trực tiếp
+      accountID: userId,
     };
 
     // Lưu bài viết vào PostCollections
     const response = await databases.createDocument(
       config.databaseId,
-      config.postCollectionId, // Sử dụng ID của PostCollections
-      ID.unique(), // Tạo ID duy nhất cho bài viết
+      config.postCollectionId,
+      ID.unique(),
       postDocument
     );
 
@@ -68,10 +66,10 @@ export const createPost = async (
     );
 
     console.log("Bài viết đã được lưu:", response);
-    return response; // Trả về thông tin bài viết đã lưu
+    return response;
   } catch (error) {
     console.error("Lỗi khi tạo bài viết:", error);
-    throw error; // Ném lỗi để xử lý ở nơi gọi hàm
+    throw error;
   }
 };
 // Hàm lấy danh sách bài viết từ mới nhất đến cũ nhất
@@ -83,10 +81,6 @@ export const fetchPostsFirst = async (limit: number) => {
       config.postCollectionId,
       [Query.orderDesc("$createdAt"), Query.limit(limit)] // Thêm limit và offset
     );
-
-    const apiUrl = `${config.endpoint}/databases/${config.databaseId}/collections/${config.postCollectionId}/documents`; // Thay thế [YOUR_API_ENDPOINT] bằng endpoint của bạn
-    console.log("API URL dữ liệu bài viết:", apiUrl); // In ra URL API
-    console.log("Dữ liệu bài viết:", response); // In ra dữ liệu bài viết
     // Kiểm tra xem có bài viết nào không
     if (response.documents.length > 0) {
       return response.documents; // Trả về danh sách bài viết
@@ -113,6 +107,47 @@ export const fetchPostsNext = async (lastID: string, limit: number) => {
     );
 
     return response;
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách bài viết tiếp theo:", error);
+    throw error;
+  }
+};
+
+// Hàm lấy bài viết của người dùng hiện tại
+export const fetchUserPostsFirst = async (userId: string, limit: number) => {
+  try {
+    // Lấy danh sách các bài viết từ PostCollections
+    const response = await databases.listDocuments(
+      config.databaseId,
+      config.postCollectionId,
+      [Query.equal("accountID", userId), Query.orderDesc("$createdAt"), Query.limit(limit)] // Thêm limit và offset
+    );
+    // Kiểm tra xem có bài viết nào không
+    if (response.documents.length > 0) {
+      return response.documents; // Trả về danh sách bài viết
+    } else {
+      console.log("Không có bài viết nào.");
+      return []; // Trả về mảng rỗng nếu không có bài viết
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách bài viết:", error);
+    throw error; // Ném lỗi để xử lý ở nơi gọi hàm
+  }
+};
+
+export const fetchUserPostsNext = async (userId: string, lastID: string, limit: number) => {
+  try {
+    const response = await databases.listDocuments(
+      config.databaseId,
+      config.postCollectionId,
+      [
+        Query.equal("accountID", userId),
+        Query.orderDesc("$createdAt"),
+        Query.limit(limit),
+        Query.cursorAfter(lastID),
+      ]
+    );
+    return response.documents;
   } catch (error) {
     console.error("Lỗi khi lấy danh sách bài viết tiếp theo:", error);
     throw error;
@@ -398,6 +433,23 @@ export const getUserPostsCount = async (userId: string) => {
     return posts.documents.length; // Trả về số lượng bài viết
   } catch (error) {
     console.error("Lỗi khi lấy số lượng bài viết:", error);
+    throw error; // Ném lỗi để xử lý ở nơi gọi hàm
+  }
+};
+
+// Hàm lấy danh sách các bài viết mà người dùng đã thích
+export const getUserLikedPosts = async (userId: string) => {
+  try {
+    const likedPosts = await databases.listDocuments(
+      config.databaseId,
+      config.postLikeCollectionId,
+      [Query.equal("userCollections", userId)]
+    );
+    console.log("Bài viết mà người dùng đã thích:", likedPosts.documents);
+    return likedPosts;
+  }
+  catch (error) {
+    console.error("Lỗi khi lấy danh sách bài viết mà người dùng đã thích:", error);
     throw error; // Ném lỗi để xử lý ở nơi gọi hàm
   }
 };

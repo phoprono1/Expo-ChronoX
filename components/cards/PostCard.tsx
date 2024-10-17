@@ -11,12 +11,13 @@ import { Image } from "expo-image";
 import { ResizeMode, Video } from "expo-av"; // Import Video từ expo-av
 import RenderHTML from "react-native-render-html";
 import { Ionicons } from "@expo/vector-icons"; // Import Ionicons
+import { getFileUrl } from "@/constants/AppwriteFile";
 
 interface PostCardProps {
   avatar: string;
   username: string;
   email: string;
-  mediaUri: string[]; // Đổi thành mảng để hỗ trợ nhiều media
+  fileIds: string[]; // Thay đổi từ mediaUri sang fileIds
   title: string;
   hashtags: string[];
   likes: number;
@@ -25,6 +26,9 @@ interface PostCardProps {
   onLike: () => void;
   onComment: () => void;
   onShare: () => void;
+  onTitlePress: () => void;
+  onHashtagPress: () => void;
+  onUserInfoPress: () => void;
   showMoreOptionsIcon?: boolean; // Thêm thuộc tính này
 }
 
@@ -32,7 +36,7 @@ const PostCard: React.FC<PostCardProps> = ({
   avatar,
   username,
   email,
-  mediaUri,
+  fileIds = [], // Provide a default empty array
   title,
   hashtags,
   likes,
@@ -41,6 +45,9 @@ const PostCard: React.FC<PostCardProps> = ({
   onLike,
   onComment,
   onShare,
+  onTitlePress,
+  onHashtagPress,
+  onUserInfoPress,
   showMoreOptionsIcon = true, // Mặc định là true
 }) => {
   const [liked, setLiked] = useState(isLiked); // Trạng thái thích
@@ -83,6 +90,9 @@ const PostCard: React.FC<PostCardProps> = ({
 
   // Hàm kiểm tra MIME type
   const getMimeType = async (url: string): Promise<string | null> => {
+    if (url === "") {
+      return null;
+    }
     try {
       const response = await fetch(url, { method: "HEAD" });
       const contentType = response.headers.get("Content-Type");
@@ -96,8 +106,9 @@ const PostCard: React.FC<PostCardProps> = ({
   useEffect(() => {
     const checkMediaTypes = async () => {
       const types = await Promise.all(
-        mediaUri.map(async (uri) => {
-          const mimeType = await getMimeType(uri);
+        fileIds.map(async (fileId) => {
+          const url = getFileUrl(fileId);
+          const mimeType = await getMimeType(url);
           return mimeType?.startsWith("video/") ? "video" : "image";
         })
       );
@@ -105,24 +116,25 @@ const PostCard: React.FC<PostCardProps> = ({
     };
 
     checkMediaTypes();
-  }, [mediaUri]);
+  }, [fileIds]);
 
-  const renderMedia = (item: string, index: number) => {
+  const renderMedia = (fileId: string, index: number) => {
+    const mediaUrl = getFileUrl(fileId);
     return (
       <View className="h-80 w-80 mr-6 ml-4 overflow-hidden flex-1">
-        {mediaTypes[index] === "video" ? ( // Kiểm tra nếu là video
+        {mediaTypes[index] === "video" ? (
           <Video
-            source={{ uri: item }}
-            style={{ borderRadius: 10 }} // Bo góc video
+            source={{ uri: mediaUrl }}
+            style={{ borderRadius: 10 }}
             useNativeControls
             resizeMode={ResizeMode.CONTAIN}
-            isLooping={false} // Có thể thay đổi thành true nếu bạn muốn video lặp lại
+            isLooping={false}
             className="h-full w-full max-w-full"
           />
         ) : (
           <Image
-            source={{ uri: item }}
-            style={{ borderRadius: 10 }} // Bo góc ảnh
+            source={{ uri: mediaUrl }}
+            style={{ borderRadius: 10 }}
             contentFit="cover"
             className="h-full w-full max-w-full"
           />
@@ -131,13 +143,14 @@ const PostCard: React.FC<PostCardProps> = ({
     );
   };
 
-  const renderSingleMedia = (item: string) => {
+  const renderSingleMedia = (fileId: string) => {
+    const mediaUrl = getFileUrl(fileId);
     return (
       <View className="h-80 w-full">
-        {mediaTypes[0] === "video" ? ( // Kiểm tra nếu là video
+        {mediaTypes[0] === "video" ? (
           <Video
-            source={{ uri: item }}
-            style={{ borderRadius: 10 }} // Bo góc video
+            source={{ uri: mediaUrl }}
+            style={{ borderRadius: 10 }}
             useNativeControls
             resizeMode={ResizeMode.CONTAIN}
             isLooping={false}
@@ -145,8 +158,8 @@ const PostCard: React.FC<PostCardProps> = ({
           />
         ) : (
           <Image
-            source={{ uri: item }}
-            style={{ borderRadius: 10 }} // Bo góc ảnh
+            source={{ uri: mediaUrl }}
+            style={{ borderRadius: 10 }}
             contentFit="cover"
             className="h-full w-full"
           />
@@ -159,10 +172,10 @@ const PostCard: React.FC<PostCardProps> = ({
     return (
       <FlatList
         horizontal={true}
-        data={mediaUri}
+        data={fileIds}
         renderItem={({ item, index }) => renderMedia(item, index)}
-        keyExtractor={(item) => item} // Sử dụng URI làm key
-        showsHorizontalScrollIndicator={false} // Ẩn thanh cuộn ngang
+        keyExtractor={(item) => item}
+        showsHorizontalScrollIndicator={false}
         nestedScrollEnabled={true}
       />
     );
@@ -178,7 +191,7 @@ const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <View className="bg-white rounded-lg shadow-sm overflow-hidden w-full p-2">
-      <View className="flex-row items-center p-2">
+      <TouchableOpacity onPress={onUserInfoPress} className="flex-row items-center p-2">
         <Image
           source={{ uri: avatar }}
           className="w-10 h-10 rounded-full ml-0" // Đặt ml-0 để avatar ở sát lề trái
@@ -192,24 +205,29 @@ const PostCard: React.FC<PostCardProps> = ({
             <Ionicons name="ellipsis-horizontal" size={24} color="black" />
           </Pressable>
         )}
-      </View>
+      </TouchableOpacity>
 
-      {mediaUri.length > 0 && ( // Kiểm tra nếu mảng mediaUri không rỗng
+      {fileIds.length > 0 && ( // Kiểm tra nếu mảng mediaUri không rỗng
         <View>
-          {mediaUri.length === 1 // Nếu chỉ có 1 media, hiển thị trực tiếp
-            ? renderSingleMedia(mediaUri[0])
-            : renderMultipleMedia() // Hiển thị nhiều media
+          {
+            fileIds.length === 1 // Nếu chỉ có 1 media, hiển thị trực tiếp
+              ? renderSingleMedia(fileIds[0])
+              : renderMultipleMedia() // Hiển thị nhiều media
           }
         </View>
       )}
 
       <View className="p-2 rounded opacity-80">
         <View className="mt-2">
-          <RenderHTMLMemo html={title} />
+          <TouchableOpacity onPress={onTitlePress}>
+            <RenderHTMLMemo html={title} />
+          </TouchableOpacity>
         </View>
-        <Text className="text-black text-base">
-          {hashtags.map((tag) => `#${tag}`).join(" ")}
-        </Text>
+        <TouchableOpacity onPress={onHashtagPress}>
+          <Text className="text-black text-base">
+            {hashtags.map((tag) => `#${tag}`).join(" ")}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View className="flex-row justify-start mt-2">

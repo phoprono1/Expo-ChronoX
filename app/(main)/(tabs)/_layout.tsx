@@ -10,6 +10,13 @@ import message from "./message";
 import profile from "./profile";
 import { useBottomSheet } from "@/hooks/BottomSheetProvider";
 import { BlurView } from "expo-blur";
+import { useEffect } from "react";
+import { account, databases } from "@/constants/AppwriteClient";
+import { config } from "@/constants/Config";
+import { Query } from "react-native-appwrite";
+import { getUserPostsCount } from "@/constants/AppwritePost";
+import { setUser } from "@/store/currentUser";
+import { useDispatch } from "react-redux";
 
 const Tab = createBottomTabNavigator();
 
