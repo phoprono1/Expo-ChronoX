@@ -15,7 +15,6 @@ export const createUser = async (
       password,
       username
     );
-    console.log("Đăng ký thành công:", response);
     const avatar = avatars.getInitials(username, 30, 30);
     const userDocument = await databases.createDocument(
       config.databaseId,
@@ -33,7 +32,6 @@ export const createUser = async (
         website: null,
       }
     );
-    console.log("Thông tin người dùng đã được lưu:", userDocument);
   } catch (error) {
     console.error("Đăng ký thất bại:", error);
   }
@@ -45,13 +43,9 @@ export const signInUser = async (email: string, password: string) => {
   try {
     // Tạo phiên đăng nhập cho người dùng
     const response = await account.createEmailPasswordSession(email, password);
-    console.log("Đăng nhập thành công:", response);
-
     // Tạo JWT cho phiên đăng nhập
     const jwtResponse = await account.createJWT();
     const jwt = jwtResponse.jwt; // Lấy token từ phản hồi
-    console.log("Token của bạn là:", jwt);
-
     return jwt; // Trả về token để sử dụng nếu cần
   } catch (error) {
     console.error("Đăng nhập thất bại:", error);
@@ -67,7 +61,6 @@ export const updateUserStatus = async (userId: string, status: 'online' | 'offli
       userId,
       { status: status }
     );
-    console.log(`User status updated to ${status}`);
   } catch (error) {
     console.error('Error updating user status:', error);
   }
@@ -88,7 +81,6 @@ export const updateAvatar = async (newAvatarUri: string) => {
     }
 
     const userId = userDocuments.documents[0].$id; // Lấy ID của tài liệu người dùng
-    console.log("ID của tài liệu người dùng là:", userId);
 
     const date = new Date().toISOString().replace(/T/, "_").replace(/\..+/, ""); // Lấy ngày và giờ hiện tại
     const fileName = `${currentAccount.name}_${date}.jpg`; // Tạo tên file theo định dạng yêu cầu
@@ -102,7 +94,7 @@ export const updateAvatar = async (newAvatarUri: string) => {
     };
 
     // Tải ảnh lên Storage và lấy URL
-    const avatarUrl = await uploadFile(file); // Kiểm tra xem uploadFile có hoạt động không
+    const avatarId = await uploadFile(file); // Kiểm tra xem uploadFile có hoạt động không
 
     // Cập nhật avatar trong cơ sở dữ liệu
     const updatedDocument = await databases.updateDocument(
@@ -110,11 +102,9 @@ export const updateAvatar = async (newAvatarUri: string) => {
       config.userCollectionId,
       userId,
       {
-        avatar: avatarUrl, // Cập nhật URL của avatar mới
+        avatarId: avatarId, // Cập nhật URL của avatar mới
       }
     );
-
-    console.log("Cập nhật avatar thành công:", updatedDocument);
   } catch (error) {
     console.error("Lỗi khi cập nhật avatar:", error);
     throw error; // Ném lỗi để xử lý ở nơi gọi hàm
@@ -132,7 +122,6 @@ export const getUserInfo = async () => {
     );
 
     if (userDocuments.documents.length > 0) {
-      console.log("Thông tin người dùng:", userDocuments.documents[0]);
       return userDocuments.documents[0]; // Trả về tài liệu người dùng
     }
     throw new Error("Không tìm thấy tài liệu người dùng.");
@@ -185,7 +174,6 @@ export const getCurrentUserId = async (userId: string) => {
 export const signOutUser = async () => {
   try {
     await account.deleteSession("current"); // Xóa phiên đăng nhập hiện tại
-    console.log("Đăng xuất thành công");
   } catch (error) {
     console.error("Lỗi khi đăng xuất:", error);
     throw error; // Ném lỗi để xử lý ở nơi gọi hàm

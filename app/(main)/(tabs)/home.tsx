@@ -30,7 +30,7 @@ import {
   toggleLikePost,
 } from "@/constants/AppwritePost";
 import { config } from "@/constants/Config";
-import { getFile, getFileDownload } from "@/constants/AppwriteFile";
+import { getFile, getFileDownload, getFileUrl } from "@/constants/AppwriteFile";
 import { router, useLocalSearchParams } from "expo-router";
 import { useDispatch } from "react-redux";
 
@@ -63,7 +63,6 @@ const Home = () => {
 
   useEffect(() => {
     if (currentUserId) {
-      console.log("currentUserId đã được thiết lập:", currentUserId);
       loadPosts(); // Gọi loadPosts khi currentUserId đã được thiết lập
     } else {
       console.log("currentUserId vẫn là null");
@@ -71,7 +70,6 @@ const Home = () => {
   }, [currentUserId]);
 
   const loadPosts = async () => {
-    console.log("currentUserId hiện tại: ", currentUserId);
     if (!currentUserId) loadCurrentUserId(); // Kiểm tra xem currentUserId đã được lấy chưa
     setLoading(true);
     try {
@@ -140,13 +138,9 @@ const Home = () => {
     const unsubscribe = client.subscribe(
       `databases.${config.databaseId}.collections.${config.postCollectionId}.documents`,
       async (response) => {
-        console.log("Bài viết mới đã được tạo:", response.payload);
         const payload = JSON.parse(JSON.stringify(response.payload)); // Chuyển đổi payload về đối tượng
 
-        console.log("payload:", payload);
         const newPostId = payload.$id; // Lấy $id từ payload
-        console.log("ID bài viết mới:", newPostId);
-
         // Lấy thông tin bài viết mới
         const newPost = await fetchPostById(newPostId); // Gọi hàm để lấy thông tin bài viết mới
 
@@ -177,31 +171,21 @@ const Home = () => {
     const unsubscribe_like_comment = client.subscribe(
       `databases.${config.databaseId}.collections.${config.statisticsPostCollectionId}.documents`,
       async (response) => {
-        console.log(
-          "Thông tin bài viết mới đã được cập nhật:",
-          response.payload
-        );
         const payload = JSON.parse(JSON.stringify(response.payload)); // Chuyển đổi payload về đối tượng
 
         // Lấy ID bài viết từ payload
         const statisticsPostId = payload.$id;
         const postId = await fetchPostByStatisticsId(statisticsPostId);
-        console.log("ID bài viết:", postId.$id);
         const updatedLikes = payload.likes; // Giả sử payload chứa số lượng likes mới
         const updatedComments = payload.comments; // Giả sử payload chứa số lượng comments mới
-        console.log("số lượng likes:", updatedLikes);
-        console.log("số lượng comments:", updatedComments);
 
         // Kiểm tra currentUserId trước khi tiếp tục
         if (!currentUserId) {
-          console.log("currentUserId chưa được thiết lập.");
           return; // Dừng lại nếu currentUserId chưa có giá trị
         }
 
         // Cập nhật số lượng likes cho bài viết tương ứng
-        console.log("ID bài viết nào đó:", postId.$id);
         const liked = await isPostLiked(postId.$id, currentUserId);
-        console.log("Đã like chưa:", liked);
         setPosts((prevPosts) =>
           prevPosts.map((post) =>
             post.$id === postId.$id
@@ -235,9 +219,6 @@ const Home = () => {
   const handleLike = async (postId: string, index: number) => {
     const post = posts[index];
     const newLikesCount = post.isLiked ? post.likes - 1 : post.likes + 1; // Cập nhật số lượng likes
-    const statisticsPost = await getPostStatistics(postId);
-    console.log("số lượng likes:", statisticsPost.likes);
-
     await toggleLikePost(postId, currentUserId ?? "");
 
     // Cập nhật trạng thái liked và số lượng likes trong state
@@ -246,14 +227,11 @@ const Home = () => {
         i === index ? { ...p, isLiked: !post.isLiked, likes: newLikesCount } : p
       )
     );
-
-    console.log("Liked post with ID:", postId);
   };
 
   // Tạo hàm handleComment
   const handleComment = (postId: string) => {
     openBottomSheet("comment", postId); // Mở modal bình luận và truyền postId
-    console.log("Commented on post with ID:", postId);
   };
 
   const handleUserInfo = (userId: string) => {
@@ -269,7 +247,6 @@ const Home = () => {
     fileIds: string[],
     title: string
   ) => {
-    console.log("fileUrl:", fileUrl);
     try {
       if (Array.isArray(fileUrl)) {
         fileUrl = fileUrl[0];
@@ -283,8 +260,6 @@ const Home = () => {
       const downloadResponse = await getFileDownload(fileIds[0]); // Giả sử hàm này trả về một đối tượng chứa đường dẫn tệp
       const localFilePath =
         downloadResponse.href || downloadResponse.toString(); // Lấy đường dẫn tệp đã tải về
-      console.log("localFilePath:", localFilePath);
-
       // Chia sẻ file
       await Share.share({
         url: localFilePath, // Sử dụng đường dẫn tệp đã tải về
@@ -303,7 +278,7 @@ const Home = () => {
       key={item.$id}
     >
       <PostCard
-        avatar={item.userInfo?.avatar || ""}
+        avatar={item.userInfo?.avatarId || ""}
         username={item.userInfo?.username || "Unknown User"}
         email={item.userInfo?.email || "No Email"}
         fileIds={item.fileIds}
@@ -319,7 +294,7 @@ const Home = () => {
         onComment={() => handleComment(item.$id)}
         onShare={() =>
           handleShareFile(
-            item.mediaUri,
+            getFileUrl(item.fileIds),
             item.fileExtension,
             item.fileIds,
             item.title

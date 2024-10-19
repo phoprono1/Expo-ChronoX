@@ -17,6 +17,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { getAvatarUrl, getFileUrl } from "@/constants/AppwriteFile";
+import { setUser } from "@/store/userSlice";
 
 const DisplayAvatar = () => {
   const user = useSelector((state: any) => state.user); // Lấy trạng thái người dùng từ Redux
@@ -25,7 +27,7 @@ const DisplayAvatar = () => {
   const [userInfo, setUserInfo] = useState<{
     name: string;
     email: string;
-    avatarUrl: string | null;
+    avatarId: string | null;
     bio: string; // Thêm bio
     followed: number; // Thêm followed
     follower: number; // Thêm follower
@@ -35,7 +37,7 @@ const DisplayAvatar = () => {
   }>({
     name: "",
     email: "",
-    avatarUrl: null,
+    avatarId: null,
     bio: "",
     followed: 0,
     follower: 0,
@@ -50,32 +52,29 @@ const DisplayAvatar = () => {
   const avatarPositionY = useSharedValue(0);
   const followScale = useSharedValue(1); // Thêm giá trị scale cho follow, follower, posts
 
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const userDocument = await getUserInfo(); // Gọi hàm getUserInfo từ appwriteConfig
-        const postsCount = await getUserPostsCount(user.userId); // Gọi hàm getUserPostsCount từ appwriteConfig
-        console.log(
-          "Số lượng bài viết của người dùng:" + user.userId,
-          postsCount
-        );
-        setUserInfo({
-          name: userDocument.username,
-          email: userDocument.email,
-          avatarUrl: userDocument.avatar,
-          bio: userDocument.bio || "", // Lấy bio
-          followed: userDocument.followed || 0, // Lấy followed
-          follower: userDocument.follower || 0, // Lấy follower
-          location: userDocument.location || null, // Lấy location
-          website: userDocument.website || null, // Lấy website
-          postsCount: postsCount, // Lấy số lượng bài viết
-        });
-      } catch (error) {
-        console.error("Lỗi khi lấy thông tin người dùng:", error);
-      }
-    };
+  const fetchUserInfo = async () => {
+    // Định nghĩa lại hàm fetchUserInfo
+    try {
+      const userDocument = await getUserInfo(); // Gọi hàm getUserInfo từ appwriteConfig
+      const postsCount = await getUserPostsCount(user.userId); // Gọi hàm getUserPostsCount từ appwriteConfig
+      setUserInfo({
+        name: userDocument.username,
+        email: userDocument.email,
+        avatarId: userDocument.avatarId,
+        bio: userDocument.bio || "", // Lấy bio
+        followed: userDocument.followed || 0, // Lấy followed
+        follower: userDocument.follower || 0, // Lấy follower
+        location: userDocument.location || null, // Lấy location
+        website: userDocument.website || null, // Lấy website
+        postsCount: postsCount, // Lấy số lượng bài viết
+      });
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin người dùng:", error);
+    }
+  };
 
-    fetchUserInfo();
+  useEffect(() => {
+    fetchUserInfo(); // Gọi hàm fetchUserInfo khi component được mount
   }, [user]);
 
   useEffect(() => {
@@ -107,7 +106,6 @@ const DisplayAvatar = () => {
     return {
       transform: [{ scale: followScale.value }],
       opacity: followScale.value, // Thêm opacity để ẩn mượt mà
-
     };
   });
 
@@ -140,15 +138,12 @@ const DisplayAvatar = () => {
         );
         finalUri = manipResult.uri; // Cập nhật uri nếu đã xoay
       }
-
-      console.log("URL của ảnh mới là:", finalUri); // Log để kiểm tra
-
-      setUserInfo((prev) => ({ ...prev, avatarUrl: finalUri })); // Cập nhật avatar hiện tại
-
       // Cập nhật avatar trong cơ sở dữ liệu bằng hàm updateAvatar
       try {
-        await updateAvatar(finalUri); // Gọi hàm updateAvatar với uri mới
-        console.log("Cập nhật avatar trong cơ sở dữ liệu thành công");
+        const updatedAvatarId = await updateAvatar(finalUri); // Gọi hàm updateAvatar với uri mới và nhận về avatarId mới
+        // Cập nhật avatarId cho user
+        setUserInfo((prev) => ({ ...prev, avatarId: updatedAvatarId!! }));
+        await fetchUserInfo(); // Gọi lại hàm fetchUserInfo để cập nhật thông tin người dùng
       } catch (error) {
         console.error("Lỗi khi cập nhật avatar:", error);
       }
@@ -160,16 +155,12 @@ const DisplayAvatar = () => {
     const unsubscribe = client.subscribe(
       `databases.${config.databaseId}.collections.${config.postCollectionId}.documents`,
       async (response) => {
-        console.log("Bài viết mới đã được tạo:", response.payload);
         const payload = JSON.parse(JSON.stringify(response.payload)); // Chuyển đổi payload về đối tượng
 
-        console.log("payload ở profile:", payload);
         const newPostId = payload.$id; // Lấy $id từ payload
         const newPost = await fetchPostById(newPostId); // Gọi hàm để lấy thông tin bài viết mới
-        console.log("ID bài viết mới:", newPostId);
         // Lấy thông tin người dùng từ accountID
         const userInfo = await getUserById(newPost.accountID.accountID); // Hàm này cần được tạo để lấy thông tin người dùng
-        console.log("userInfo ở profile:", userInfo.$id);
         // Hàm load lại số lượng bài viết
         const postsCount = await getUserPostsCount(userInfo.$id);
         setUserInfo((prev) => ({ ...prev, postsCount: postsCount }));
@@ -181,15 +172,34 @@ const DisplayAvatar = () => {
     };
   }, []);
 
+  // Hàm use effect subcribe theo dõi sự kiện thay đổi avatar
+  useEffect(() => {
+    const unsubscribeAvatar = client.subscribe(
+      `databases.${config.databaseId}.collections.${config.userCollectionId}.documents`,
+      async (response) => {
+        const payload = JSON.parse(JSON.stringify(response.payload)); // Chuyển đổi payload về đối tượng
+
+        // Cập nhật avatarId cho user
+        if (payload.avatarId) {
+          setUserInfo((prev) => ({ ...prev, avatarId: payload.avatarId }));
+        }
+      }
+    );
+
+    return () => {
+      unsubscribeAvatar();
+    };
+  }, []);
+
   return (
     <SafeAreaView className={`bg-white ${isMinimized ? "" : "p-4"}`}>
       <View className={`flex ${isMinimized ? "flex-row" : "items-center"}`}>
         <TouchableOpacity onPress={handleChangeAvatar}>
           <Animated.Image
             source={{
-              uri: user.avatar
-                ? user.avatar
-                : String(avatars.getInitials(user.name, 30, 30)),
+              uri: userInfo.avatarId
+                ? getAvatarUrl(userInfo.avatarId)
+                : String(avatars.getInitials(userInfo.name, 30, 30)), // Sử dụng getFileUrl để lấy URL của avatar
             }}
             style={[animatedAvatarStyle]} // Kích thước avatar
             className="w-32 h-32 rounded-full border-4 border-gray-300"

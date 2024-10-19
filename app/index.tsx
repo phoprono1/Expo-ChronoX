@@ -37,7 +37,6 @@ export default function Index() {
     if (currentUserId) {
       try {
         await updateUserStatus(currentUserId, status);
-        console.log(`Trạng thái người dùng đã được cập nhật thành ${status}`);
       } catch (error) {
         console.error("Lỗi khi cập nhật trạng thái người dùng:", error);
       }
@@ -60,7 +59,7 @@ export default function Index() {
           setIsLoggedIn(false);
         }
       } catch (error) {
-        console.log("Lỗi khi kiểm tra trạng thái đăng nhập:", error);
+        console.error("Lỗi khi kiểm tra trạng thái đăng nhập:", error);
       } finally {
         setIsLoading(false);
       }
@@ -85,7 +84,7 @@ export default function Index() {
             $id: userDocument.$id,
             userId: userDocument.accountID,
             email: userDocument.email,
-            avatar: userDocument.avatar,
+            avatarId: userDocument.avatarId,
             name: userDocument.username, // Thêm name
             bio: userDocument.bio || "", // Thêm bio
             followed: userDocument.followed || 0, // Thêm followed
@@ -95,7 +94,6 @@ export default function Index() {
             postsCount: await getUserPostsCount(userDocument.$id), // Thêm postsCount
           };
           dispatch(setUser(userInfo)); // Cập nhật thông tin người dùng vào Redux
-          console.log("Thông tin người dùng mới vào: ", userInfo);
         }
       } catch (error) {
         console.error("Lỗi khi lấy thông tin người dùng:", error);
@@ -111,13 +109,11 @@ export default function Index() {
         appState.current.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        console.log('Ứng dụng đã chuyển sang trạng thái active');
         updateUserOnlineStatus('online');
       } else if (
         appState.current === 'active' &&
         nextAppState.match(/inactive|background/)
       ) {
-        console.log('Ứng dụng đã chuyển sang trạng thái background');
         updateUserOnlineStatus('offline');
       }
   

@@ -66,7 +66,6 @@ const Index = () => {
 
   useEffect(() => {
     if (currentUserId) {
-      console.log("currentUserId đã được thiết lập:", currentUserId);
       loadPosts(); // Gọi loadPosts khi currentUserId đã được thiết lập
     } else {
       console.log("currentUserId vẫn là null");
@@ -74,7 +73,6 @@ const Index = () => {
   }, [currentUserId]);
 
   const loadPosts = async () => {
-    console.log("currentUserId hiện tại: ", currentUserId);
     if (!currentUserId) return; // Dừng lại nếu currentUserId chưa có giá trị
     setLoading(true);
     try {
@@ -115,7 +113,6 @@ const Index = () => {
         lastID,
         limit
       );
-      console.log("Sự kiện load thêm post đã được kích hoạt 1:", fetchedPosts);
       const uniquePosts = fetchedPosts.filter(
         (post) => !posts.some((existingPost) => existingPost.$id === post.$id)
       );
@@ -135,9 +132,6 @@ const Index = () => {
         })
       );
   
-      // Log postsWithUserInfo để kiểm tra
-      console.log("Posts with user info:", postsWithUserInfo);
-  
       setPosts((prevPosts) => [...prevPosts, ...postsWithUserInfo]);
       setLastID(
         uniquePosts.length > 0 ? uniquePosts[uniquePosts.length - 1].$id : null
@@ -153,7 +147,6 @@ const Index = () => {
     const post = posts[index];
     const newLikesCount = post.isLiked ? post.likes - 1 : post.likes + 1; // Cập nhật số lượng likes
     const statisticsPost = await getPostStatistics(postId);
-    console.log("số lượng likes:", statisticsPost.likes);
 
     await toggleLikePost(postId, currentUserId ?? "");
 
@@ -163,8 +156,6 @@ const Index = () => {
         i === index ? { ...p, isLiked: !post.isLiked, likes: newLikesCount } : p
       )
     );
-
-    console.log("Liked post with ID:", postId);
   };
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -176,7 +167,6 @@ const Index = () => {
   // Tạo hàm handleComment
   const handleComment = (postId: string) => {
     openBottomSheet("comment", postId); // Mở modal bình luận và truyền postId
-    console.log("Commented on post with ID:", postId);
   };
   // Hàm chia sẻ file
   const handleShareFile = async (
@@ -185,7 +175,6 @@ const Index = () => {
     fileIds: string[],
     title: string
   ) => {
-    console.log("fileUrl:", fileUrl);
     try {
       if (Array.isArray(fileUrl)) {
         fileUrl = fileUrl[0];
@@ -199,8 +188,6 @@ const Index = () => {
       const downloadResponse = await getFileDownload(fileIds[0]); // Giả sử hàm này trả về một đối tượng chứa đường dẫn tệp
       const localFilePath =
         downloadResponse.href || downloadResponse.toString(); // Lấy đường dẫn tệp đã tải về
-      console.log("localFilePath:", localFilePath);
-
       // Chia sẻ file
       await Share.share({
         url: localFilePath, // Sử dụng đường dẫn tệp đã tải về
@@ -219,7 +206,7 @@ const Index = () => {
       key={item.$id}
     >
       <PostCard
-        avatar={item.userInfo?.avatar || ""}
+        avatar={item.userInfo?.avatarId || ""}
         username={item.userInfo?.username || "Unknown User"}
         email={item.userInfo?.email || "No Email"}
         fileIds={item.fileIds}

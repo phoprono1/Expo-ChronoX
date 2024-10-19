@@ -51,7 +51,6 @@ const LikedPostItem: React.FC<LikedPostItemProps> = ({ postId, fileId }) => {
   // Tạo hàm handleComment
   const handleComment = (postId: string) => {
     openBottomSheet("comment", postId); // Mở modal bình luận và truyền postId
-    console.log("Commented on post with ID:", postId);
   };
 
   return (

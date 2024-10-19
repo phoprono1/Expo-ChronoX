@@ -19,12 +19,13 @@ import { Avatar } from "react-native-ui-lib";
 import { client } from "@/constants/AppwriteClient";
 import { config } from "@/constants/Config";
 import { router } from "expo-router";
+import { getAvatarUrl } from "@/constants/AppwriteFile";
 
 // Cập nhật interface Followed
 interface Followed {
   $id: string;
   accountID: string;
-  avatar: string | null;
+  avatarId: string | null;
   bio: string | null;
   email: string;
   followed: number;
@@ -81,15 +82,13 @@ const Message = () => {
     const unsubscribe = client.subscribe(
       `databases.${config.databaseId}.collections.${config.userCollectionId}.documents`,
       async (response) => {
-        console.log("Đã có gì đó xảy ra ở User: ", response.payload);
         const updatedUser = JSON.parse(JSON.stringify(response.payload));
         
         // Kiểm tra xem có sự thay đổi trong followed hoặc follower không
         if (updatedUser.followed !== undefined || updatedUser.follower !== undefined) {
           // Nếu có, kiểm tra xem userInfo và updatedUser có phải là bạn bè không
           const areTheyFriends = await updateFollowStatus(userInfo.$id, updatedUser.$id);
-          console.log("Có là bạn không?", areTheyFriends)
-          
+
           if (areTheyFriends) {
             // Nếu là bạn bè, cập nhật danh sách bạn bè
             setFriendsList((prevList) => {
@@ -138,10 +137,17 @@ const Message = () => {
     };
   });
 
+  const handleChat = (userId: string) => {
+    router.push({
+      pathname: "../(main)/(functions)/chat/[chat]",
+      params: { userInfoId: userId, currentUserId: userInfo.$id },
+    });
+  };
+
   const renderStoryItem = ({ item }: { item: Followed }) => (
     <TouchableOpacity className="items-center mr-4">
       <View className="relative">
-        <Avatar source={{ uri: item.avatar || undefined }} size={60} />
+        <Avatar source={{ uri: getAvatarUrl(item.avatarId!!)  || undefined }} size={60} />
         <View
           className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${
             item.isOnline ? "bg-green-500" : "bg-gray-400"
@@ -155,9 +161,9 @@ const Message = () => {
   );
 
   const renderChatItem = ({ item }: { item: Followed }) => (
-    <TouchableOpacity className="flex-row items-center p-3 border-b border-gray-200">
+    <TouchableOpacity className="flex-row items-center p-3 border-b border-gray-200" onPress={() =>handleChat(item.$id)}>
       <View className="relative">
-        <Avatar source={{ uri: item.avatar || undefined }} size={50} />
+        <Avatar source={{ uri: getAvatarUrl(item.avatarId!!) || undefined }} size={50} />
         <View
           className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
             item.isOnline ? "bg-green-500" : "bg-gray-400"

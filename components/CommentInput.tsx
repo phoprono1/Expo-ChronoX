@@ -39,7 +39,6 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
   const [keyboardVisible, setKeyboardVisible] = useState(false); // State để theo dõi trạng thái bàn phím
 
   const handleSubmit = async () => {
-    console.log("Comment: ", comment);
     if (comment.trim()) {
       await createComment(postId, currentUserId ?? "", comment);
       onSubmit(comment);
@@ -59,9 +58,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
   const loadCurrentUserId = async () => {
     try {
       const currentAccount = await account.get();
-      console.log("currentAccount:", currentAccount);
       const currentUserId = await getCurrentUserId(currentAccount.$id);
-      console.log("currentUserId:", currentUserId);
       setCurrentUserId(currentUserId);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin người dùng:", error);
@@ -71,7 +68,6 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
   // Hàm để lấy thông tin bài viết
   const loadPostData = async () => {
     if (currentUserId == null) {
-      console.log("currentUserId chưa được thiết lập.");
       loadCurrentUserId();
     }
     try {
@@ -104,7 +100,6 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
 
   useEffect(() => {
     if (currentUserId) {
-      console.log("currentUserId đã được thiết lập:", currentUserId);
       loadPostData(); // Gọi loadPosts khi currentUserId đã được thiết lập
     } else {
       console.log("currentUserId vẫn là null");
@@ -135,12 +130,9 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
     const subscription = client.subscribe(
       `databases.${config.databaseId}.collections.${config.commentCollectionId}.documents`,
       async (response) => {
-        console.log("Bình luận mới đã được tạo:", response.payload);
         if (!currentUserId) {
-          console.log("currentUserId chưa được thiết lập.");
           await loadCurrentUserId(); // Đợi cho đến khi currentUserId được thiết lập
         }
-        console.log("currentUserId đã được thiết lập:", currentUserId); // Kiểm tra giá trị ở đây
         await loadPostData(); // Đảm bảo currentUserId đã có giá trị
       }
     );
@@ -181,7 +173,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, postId }) => {
         {postData ? (
           <>
             <PostCard
-              avatar={postData.userInfo?.avatar || ""}
+              avatar={postData.userInfo?.avatarId || ""}
               username={postData.userInfo?.username || "Unknown User"}
               email={postData.userInfo?.email || "No Email"}
               fileIds={postData.fileIds}

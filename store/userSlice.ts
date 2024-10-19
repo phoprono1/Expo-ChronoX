@@ -3,7 +3,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 interface UserState {
   email: string;
   userId: string;
-  avatar: string | null;
+  avatarId: string | null;
   name: string;
   bio: string;
   followed: number;
@@ -16,7 +16,7 @@ interface UserState {
 const initialState: UserState = {
   email: '',
   userId: '',
-  avatar: null,
+  avatarId: null,
   name: '',
   bio: '',
   followed: 0,

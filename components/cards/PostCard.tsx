@@ -11,7 +11,7 @@ import { Image } from "expo-image";
 import { ResizeMode, Video } from "expo-av"; // Import Video từ expo-av
 import RenderHTML from "react-native-render-html";
 import { Ionicons } from "@expo/vector-icons"; // Import Ionicons
-import { getFileUrl } from "@/constants/AppwriteFile";
+import { getAvatarUrl, getFileUrl } from "@/constants/AppwriteFile";
 
 interface PostCardProps {
   avatar: string;
@@ -191,9 +191,12 @@ const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <View className="bg-white rounded-lg shadow-sm overflow-hidden w-full p-2">
-      <TouchableOpacity onPress={onUserInfoPress} className="flex-row items-center p-2">
+      <TouchableOpacity
+        onPress={onUserInfoPress}
+        className="flex-row items-center p-2"
+      >
         <Image
-          source={{ uri: avatar }}
+          source={{ uri: getAvatarUrl(avatar) }}
           className="w-10 h-10 rounded-full ml-0" // Đặt ml-0 để avatar ở sát lề trái
         />
         <View className="ml-2">

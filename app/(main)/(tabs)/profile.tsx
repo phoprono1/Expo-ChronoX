@@ -47,7 +47,7 @@ const Profile = () => {
           dispatch(setUser({ // Dispatch action để cập nhật trạng thái
             email: userDocument.email,
             userId: userDocument.$id,
-            avatar: userDocument.avatar,
+            avatarId: userDocument.avatarId,
             name: userDocument.username, // Thêm name
             bio: userDocument.bio || "", // Thêm bio
             followed: userDocument.followed || 0, // Thêm followed

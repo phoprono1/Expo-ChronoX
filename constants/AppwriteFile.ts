@@ -15,6 +15,10 @@ export const getFileUrl = (fileId: string) => {
   return `${config.endpoint}/storage/buckets/${config.storagePostId}/files/${fileId}/view?project=${config.projectId}`;
 };
 
+export const getAvatarUrl = (fileId: string) => {
+  return `${config.endpoint}/storage/buckets/${config.storageAvatarId}/files/${fileId}/view?project=${config.projectId}`;
+};
+
 // Hàm lấy URL của tệp từ bucket bài viết
 export const getFileFromPostView = async (fileId: string) => {
   try {
@@ -34,7 +38,6 @@ export const uploadFile = async (file: {
   mimeType: any;
   fileSize?: any;
 }) => {
-  console.log("Đang tải file:", file); // Thêm log để kiểm tra file
   if (!file) return;
   const { mimeType, ...rest } = file;
 
@@ -57,10 +60,7 @@ export const uploadFile = async (file: {
       ID.unique(),
       asset
     );
-
-    const fileUrl = await getFileView(uploadedFile.$id, "image"); // Đổi từ getFilePreview sang getFileView
-
-    return fileUrl;
+    return uploadedFile.$id;
   } catch (error) {
     throw new Error(error as string);
   }
@@ -117,13 +117,11 @@ export const uploadPostFiles = async (
 
 export const getFile = async (fileId: string) => {
   const result = await storage.getFile(config.storagePostId, fileId);
-  console.log("result:", result);
   return result;
 }
 
 export const getFileDownload = async (fileId: string) => {
   const result = storage.getFileDownload(config.storagePostId, fileId);
-  console.log("result:", result);
   return result;
 }
 

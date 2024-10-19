@@ -4,7 +4,7 @@ interface CurrentUserState {
   $id: string
   email: string;
   userId: string;
-  avatar: string | null;
+  avatarId: string | null;
   name: string;
   bio: string;
   followed: number;
@@ -18,7 +18,7 @@ const initialState: CurrentUserState = {
   $id: '',
   email: '',
   userId: '',
-  avatar: null,
+  avatarId: null,
   name: '',
   bio: '',
   followed: 0,

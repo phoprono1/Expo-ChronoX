@@ -34,8 +34,6 @@ export const createPost = async (
     // Lấy ID của người dùng hiện tại
     const currentUser = await getUserInfo();
     const userId = currentUser.$id;
-    console.log("id người dùng: " + userId);
-
     // Tạo đối tượng bài viết
     const postDocument = {
       fileIds: uploadedFiles.map((file) => file.id), // Chỉ lưu ID của các file đã tải lên
@@ -65,7 +63,6 @@ export const createPost = async (
       statisticsPostDocument
     );
 
-    console.log("Bài viết đã được lưu:", response);
     return response;
   } catch (error) {
     console.error("Lỗi khi tạo bài viết:", error);
@@ -176,7 +173,6 @@ export const fetchPostByStatisticsId = async (statisticsPostId: string) => {
       config.statisticsPostCollectionId,
       statisticsPostId
     );
-    console.log("ID thống kê:", response.postCollections.$id);
     const postId = await fetchPostById(response.postCollections.$id);
     return postId;
   } catch (error) {
@@ -215,8 +211,6 @@ export const likePost = async (postId: string, userId: string) => {
         userCollections: userId,
       }
     );
-
-    console.log("Thích bài viết thành công:", likeDocument);
 
     // Cập nhật số lượng likes trong statisticsPostCollection
     const statsDocument = await databases.listDocuments(
@@ -263,7 +257,6 @@ export const getPostStatistics = async (postId: string) => {
       config.statisticsPostCollectionId,
       [Query.equal("postCollections", postId)]
     );
-    console.log("thông tin thống kê bài viết:", statisticsPost.documents[0]);
     return statisticsPost.documents[0];
   } catch (error) {
     console.error("Lỗi khi lấy thông tin thống kê bài viết:", error);
@@ -282,10 +275,6 @@ export const isPostLiked = async (postId: string, userId: string) => {
         Query.equal("userCollections", userId),
       ] // Tìm kiếm theo postId và userId
     );
-    // in ra postId và userId
-    console.log("postId: ", postId);
-    console.log("userId: ", userId);
-
     // Nếu có tài liệu nào được tìm thấy, trả về true, ngược lại trả về false
     return likeDocuments.documents.length > 0;
   } catch (error) {
@@ -313,8 +302,6 @@ export const unlikePost = async (postId: string, userId: string) => {
         config.postLikeCollectionId,
         likeDocuments.documents[0].$id // ID của tài liệu thích
       );
-      console.log("Hủy thích bài viết thành công.");
-
       // Cập nhật số lượng likes cho bài viết
       const statisticsPost = await databases.listDocuments(
         config.databaseId,
@@ -323,7 +310,6 @@ export const unlikePost = async (postId: string, userId: string) => {
       );
 
       if (statisticsPost.documents.length > 0) {
-        console.log("số lượng likes:", statisticsPost.documents[0].likes);
         let likesCount = statisticsPost.documents[0].likes - 1;
 
         // Cập nhật tài liệu thống kê bằng ID của tài liệu thống kê
@@ -393,8 +379,6 @@ export const createComment = async (
         }
       );
     }
-
-    console.log("Bình luận đã được lưu:", commentDocument);
     return commentDocument; // Trả về tài liệu bình luận đã tạo
   } catch (error) {
     console.error("Lỗi khi tạo bình luận:", error);
@@ -410,8 +394,6 @@ export const getCommentsByPostId = async (postId: string) => {
       config.commentCollectionId,
       [Query.equal("postCollections", postId), Query.orderDesc("$createdAt")]
     );
-
-    console.log("Bình luận:", comments);
     return comments; // Trả về danh sách bình luận
   } catch (error) {
     console.error("Lỗi khi lấy bình luận:", error);
@@ -428,8 +410,6 @@ export const getUserPostsCount = async (userId: string) => {
       [Query.equal("accountID", userId)]
     );
 
-    console.log("Số lượng bài viết của người dùng:" + userId, posts.documents.length);
-
     return posts.documents.length; // Trả về số lượng bài viết
   } catch (error) {
     console.error("Lỗi khi lấy số lượng bài viết:", error);
@@ -445,7 +425,6 @@ export const getUserLikedPosts = async (userId: string) => {
       config.postLikeCollectionId,
       [Query.equal("userCollections", userId)]
     );
-    console.log("Bài viết mà người dùng đã thích:", likedPosts.documents);
     return likedPosts;
   }
   catch (error) {

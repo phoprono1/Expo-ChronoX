@@ -43,9 +43,6 @@ export const updateFollowStatus = async (
           status: "friend",
         }
       );
-
-      console.log("Cập nhật trạng thái thành công: friend");
-
       // Kiểm tra lại xem hai người dùng có phải là bạn bè không
       const areTheyFriends = await areFriends(followerId, followedId);
       return areTheyFriends; // Trả về kết quả kiểm tra
@@ -68,7 +65,6 @@ export const followUser = async (followerId: string, followedId: string) => {
 
     // Nếu đã từng follow, gọi hàm hủy theo dõi
     if (existingFollow.documents.length > 0) {
-      console.log("Bạn đã theo dõi người dùng này trước đó. Hủy theo dõi...");
       await unfollowUser(followerId, followedId); // Gọi hàm hủy theo dõi
       return; // Kết thúc hàm
     }
@@ -116,8 +112,6 @@ export const followUser = async (followerId: string, followedId: string) => {
         follower: currentFollowers + 1,
       }
     );
-
-    console.log("Theo dõi thành công:", followDocument);
 
     // Kiểm tra và cập nhật trạng thái nếu cả hai đều theo dõi nhau
     await updateFollowStatus(followerId, followedId);
@@ -204,8 +198,6 @@ export const unfollowUser = async (followerId: string, followedId: string) => {
     } else {
       console.log("Không tìm thấy mối quan hệ để cập nhật trạng thái.");
     }
-
-    console.log("Hủy theo dõi thành công.");
   } catch (error) {
     console.error("Lỗi khi hủy theo dõi người dùng:", error);
     throw error; // Ném lỗi để xử lý ở nơi gọi hàm
@@ -271,10 +263,6 @@ export const areFriends = async (userId1: string, userId2: string) => {
     );
 
     // Nếu cả hai mối quan hệ đều tồn tại và có trạng thái "friend", thì họ là bạn bè
-    console.log(
-      "sự kiện kiểm tra tình bạn: ",
-      relation1.documents.length > 0 && relation2.documents.length > 0
-    );
     return relation1.documents.length > 0 && relation2.documents.length > 0;
   } catch (error) {
     console.error("Lỗi khi kiểm tra trạng thái bạn bè:", error);

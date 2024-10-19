@@ -8,13 +8,13 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { config } from "@/constants/Config";
+import { getAvatarUrl } from "@/constants/AppwriteFile";
 
 const UsersProfile = () => {
   const userInfo = useSelector((state: any) => state.userInfo); // Lấy trạng thái người dùng từ Redux
   const isMinimized = useSelector(
     (state: any) => state.minimizeUsersInfo.isMinimized
   ); // Lấy trạng thái isMinimized từ Redux
-  console.log("info của user này", userInfo);
 
   const [followerCount, setFollowerCount] = useState(userInfo.follower); // Thêm state cho số lượng follower
 
@@ -65,18 +65,9 @@ const UsersProfile = () => {
     const unsubscribe = client.subscribe(
       `databases.${config.databaseId}.collections.${config.userCollectionId}.documents`,
       async (response) => {
-        console.log(
-          "Đã có chuyện gì đó xảy ra ở UsersProfile: ",
-          response.payload
-        );
         const payload = JSON.parse(JSON.stringify(response.payload));
-        console.log("id của user thay đổi là: ", payload.$id);
-        console.log("số lượng follower của user đó là: ", payload.follower);
-        console.log("sự kiện này gồm user gì 1", userInfo.$id)
-        console.log("sự kiện này gồm user gì 2", payload.$id)
         if (userInfo.$id == payload.$id) {
           setFollowerCount(payload.follower); // Cập nhật state với số lượng follower mới
-          console.log("sự kiện này đã được kích hoạt!")
         }
       }
     );
@@ -92,8 +83,8 @@ const UsersProfile = () => {
         <TouchableOpacity onPress={() => {}}>
           <Animated.Image
             source={{
-              uri: userInfo.avatar
-                ? userInfo.avatar
+              uri: getAvatarUrl(userInfo.avatar)
+                ? getAvatarUrl(userInfo.avatar) 
                 : String(avatars.getInitials(userInfo.name, 30, 30)),
             }}
             style={[animatedAvatarStyle]} // Kích thước avatar

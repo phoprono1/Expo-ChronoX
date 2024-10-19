@@ -31,12 +31,11 @@ const UserInfo = () => {
 
         if (userDocuments.documents.length > 0) {
           const userDocument = userDocuments.documents[0];
-          console.log("userDocument", userDocument);
           const userInfo = {
             $id: userDocument.$id,
             userId: userDocument.accountID,
             email: userDocument.email,
-            avatar: userDocument.avatar,
+            avatar: userDocument.avatarId,
             name: userDocument.username, // Thêm name
             bio: userDocument.bio || "", // Thêm bio
             followed: userDocument.followed || 0, // Thêm followed
@@ -47,8 +46,6 @@ const UserInfo = () => {
           };
 
           dispatch(setUserInfo(userInfo)); // Dispatch action để cập nhật trạng thái
-          console.log("userInfo của tôi", userInfo);
-          console.log("currentUser của tôi", currentUserId);
 
           // Kiểm tra xem người dùng hiện tại đã theo dõi người dùng này chưa
           const following = await isFollowing(

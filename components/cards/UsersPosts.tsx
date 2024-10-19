@@ -53,7 +53,6 @@ const Index = () => {
 
   useEffect(() => {
     if (userInfo) {
-      console.log("currentUserId đã được thiết lập:", userInfo);
       loadPosts(); // Gọi loadPosts khi currentUserId đã được thiết lập
     } else {
       console.log("currentUserId vẫn là null");
@@ -68,7 +67,6 @@ const Index = () => {
   }, [dispatch]);
 
   const loadPosts = async () => {
-    console.log("currentUserId hiện tại: ", userInfo);
     if (!userInfo) return; // Dừng lại nếu currentUserId chưa có giá trị
     setLoading(true);
     try {
@@ -143,8 +141,6 @@ const Index = () => {
     const post = posts[index];
     const newLikesCount = post.isLiked ? post.likes - 1 : post.likes + 1; // Cập nhật số lượng likes
     const statisticsPost = await getPostStatistics(postId);
-    console.log("số lượng likes:", statisticsPost.likes);
-
     await toggleLikePost(postId, userInfo.$id ?? "");
 
     // Cập nhật trạng thái liked và số lượng likes trong state
@@ -153,8 +149,6 @@ const Index = () => {
         i === index ? { ...p, isLiked: !post.isLiked, likes: newLikesCount } : p
       )
     );
-
-    console.log("Liked post with ID:", postId);
   };
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -166,7 +160,6 @@ const Index = () => {
   // Tạo hàm handleComment
   const handleComment = (postId: string) => {
     openBottomSheet("comment", postId); // Mở modal bình luận và truyền postId
-    console.log("Commented on post with ID:", postId);
   };
   // Hàm chia sẻ file
   const handleShareFile = async (
@@ -175,7 +168,6 @@ const Index = () => {
     fileIds: string[],
     title: string
   ) => {
-    console.log("fileUrl:", fileUrl);
     try {
       if (Array.isArray(fileUrl)) {
         fileUrl = fileUrl[0];
@@ -189,8 +181,6 @@ const Index = () => {
       const downloadResponse = await getFileDownload(fileIds[0]); // Giả sử hàm này trả về một đối tượng chứa đường dẫn tệp
       const localFilePath =
         downloadResponse.href || downloadResponse.toString(); // Lấy đường dẫn tệp đã tải về
-      console.log("localFilePath:", localFilePath);
-
       // Chia sẻ file
       await Share.share({
         url: localFilePath, // Sử dụng đường dẫn tệp đã tải về
@@ -209,7 +199,7 @@ const Index = () => {
       key={item.$id}
     >
       <PostCard
-        avatar={item.userInfo?.avatar || ""}
+        avatar={item.userInfo?.avatarId || ""}
         username={item.userInfo?.username || "Unknown User"}
         email={item.userInfo?.email || "No Email"}
         fileIds={item.fileIds}

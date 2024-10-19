@@ -2,6 +2,7 @@ import { View, Text } from 'react-native';
 import React from 'react';
 import { useBottomSheet } from '@/hooks/BottomSheetProvider'; // Import useBottomSheet
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Search = () => {
   const { isVisible } = useBottomSheet(); // Lấy trạng thái từ context
@@ -20,9 +21,9 @@ const Search = () => {
   });
 
   return (
-    <View className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white">
       <Animated.Text style={animatedStyle}>search</Animated.Text>
-    </View>
+    </SafeAreaView>
   );
 };
 
